@@ -1,0 +1,61 @@
+# FlashMe V2 armips 补丁工作流
+
+此目录以官方 NTR Firmware V3 为唯一固件输入，重建 FlashMe V2 镜像。运行一次 `make` 后，最终镜像写入本目录的 `flashme_v2.bin`。
+
+流程不依赖原始 FlashMe 安装器或用于分析的 `temp2/`：FlashMe 的新增代码、头部改动和局部指令替换均已写入 `src/` 下的 armips 源文件。
+
+## 目录结构
+
+```text
+official_v3.bin       官方 V3 输入固件
+Makefile              构建入口
+include/symbol.inc    共享定义
+src/main.s            armips 入口，包含全部组件补丁
+src/patch_h.s         主固件头 H
+src/patch_p1.s ...    P1--P5
+src/patch_fh.s        FlashMe 头 FH
+src/patch_fp1.s ...   FP1、FP2
+temp/                 从官方 V3 直接导出的明文 H、P1--P5
+build/                armips 生成的明文 H、P1--P5、FH、FP1、FP2
+flashme_v2.bin        最终打包镜像
+```
+
+`temp/` 和 `build/` 中只存放明文组件。压缩、P1/P2 加密、组件对齐、头部偏移及校验更新全部由最后的 `dsfwtool` 打包命令处理。
+
+## 前置文件
+
+本目录需要：
+
+- `official_v3.bin`：官方 NTR Firmware V3；
+- `../armips.exe`：armips；
+- `../dsfwtool.exe`：dsfwtool。
+
+默认布局已将两个工具放在 `v2` 的父目录。若官方固件位于其他位置，可在调用时覆写 `OFFICIAL_V3`，例如：
+
+```bat
+make OFFICIAL_V3=D:/firmware/official_v3.bin
+```
+
+## 构建
+
+在本目录运行：
+
+```bat
+make
+```
+
+`Makefile` 依次执行：
+
+1. 使用 `dsfwtool -x` 将官方 V3 导出为 `temp/` 内的解密、解压明文组件；
+2. 使用 `armips` 执行 `src/main.s`，在 `build/` 生成 FlashMe V2 的明文组件；
+3. 使用 `dsfwtool -c` 对 P1/P2 压缩并加密、对 P3--P5/FP1/FP2 压缩，并在 `0x3FC80` 写入 FH，生成根目录的 `flashme_v2.bin`。
+
+## 组件构造
+
+- H、P1、P2、FH：由 armips 源码直接生成。
+- FP1：`0x200` 字节 FlashMe ARM9 前缀，加上官方 P1，并进行六处 V2 Thumb 兼容性补丁。
+- FP2：`0x200` 字节 FlashMe ARM7 前缀，加上官方 P2。
+- P3：以官方 P3 为基础进行三处局部 Thumb 补丁。
+- P4、P5：直接保留官方 V3 的明文内容。
+
+因此源码表达的是组件级结构和真正的修改点，而不是会把整体搬移误识别为改动的镜像逐字节差分。
