@@ -1,0 +1,41 @@
+# FlashMe V5 rebuild: official V3 -> plaintext temp -> plaintext build -> image.
+
+ARMIPS ?= ../armips.exe
+DSFWTOOL ?= ../dsfwtool.exe
+OFFICIAL_V3 ?= official_v3.bin
+
+TEMP_DIR := temp
+BUILD_DIR := build
+VARIANT ?= normal
+
+ifeq ($(VARIANT),normal)
+BUILD_STEALTH := 0
+OUTPUT := flashme_v5.bin
+else ifeq ($(VARIANT),stealth)
+BUILD_STEALTH := 1
+OUTPUT := flashme_v5_stealth.bin
+else
+$(error VARIANT must be normal or stealth)
+endif
+
+.PHONY: all unpack patch pack normal stealth variants
+
+all: pack
+
+unpack:
+	mkdir -p $(TEMP_DIR) $(BUILD_DIR)
+	$(DSFWTOOL) -x $(OFFICIAL_V3) -h $(TEMP_DIR)/h.bin -p1 -decrypt -uncomp $(TEMP_DIR)/p1.bin -p2 -decrypt -uncomp $(TEMP_DIR)/p2.bin -p3 -uncomp $(TEMP_DIR)/p3.bin -p4 -uncomp $(TEMP_DIR)/p4.bin -p5 -uncomp $(TEMP_DIR)/p5.bin
+
+patch: unpack
+	$(ARMIPS) -root . -definelabel BuildStealth $(BUILD_STEALTH) src/main.s
+
+pack: patch
+	$(DSFWTOOL) -c $(OUTPUT) -h $(BUILD_DIR)/h.bin -p1 -comp -encrypt $(BUILD_DIR)/p1.bin -p2 -comp -encrypt $(BUILD_DIR)/p2.bin -p3 -comp --p345-nearest-greedy $(BUILD_DIR)/p3.bin -p4 -comp --p345-nearest-greedy $(BUILD_DIR)/p4.bin -p5 -comp --p345-nearest-greedy $(BUILD_DIR)/p5.bin -fh --offset 0x3F680 $(BUILD_DIR)/fh.bin -fp1 -comp $(BUILD_DIR)/fp1.bin -fp2 -comp $(BUILD_DIR)/fp2.bin -b $(OFFICIAL_V3) -s 256K --fill FF
+
+normal:
+	$(MAKE) VARIANT=normal pack
+
+stealth:
+	$(MAKE) VARIANT=stealth pack
+
+variants: normal stealth
