@@ -26,6 +26,8 @@
 .definelabel OAM,                           0x07000000
 .definelabel MM_PALRAM_SZ,                  0x00000800
 .definelabel MM_OBJRAM_SZ,                  0x00000800
+.definelabel VramLcdcBytes,                 0x000a4000
+.definelabel WRAM_0KARM9_32KARM7,           0x03
 .definelabel VramLcdcDisableAll,            0x80808080
 
 .definelabel KEY_A,                         (1 << 0)
