@@ -1,4 +1,51 @@
-// FlashMe patch entry point.
+// FlashMe V2 inferred reconstruction entry point.
+//
+// =============================================================================
+// Evidence and reconstruction scope (English)
+// =============================================================================
+//
+// No original FlashMe V2 payload is used or claimed by this directory.  This is
+// a functional reconstruction inferred from the known V1 and V3 Phat payloads
+// and contemporary forum records.  Its intentional scope is exactly V1's
+// baseline behavior plus the reported V2 change: omit the health-warning path
+// during direct .ds.gba boot.  Its component construction and physical order
+// consistently follow V1, P3 -> FP1 -> FP2; it does not import V3's shortened
+// display-timing gates or its rewritten FP2 prefix.  The extracted V1 and V3
+// P3 bytes are identical, so this project does not invent a separate V3-only
+// P3/RSA choice where the component evidence has none.
+//
+// The primary H/P1/P2/P3/P4/P5 layout follows V1.  Known V1 and V3 Phat images
+// have identical bytes at image offsets 0x00000--0x0FFFF; this reconstruction
+// preserves that shared protected region.  Its selected secondary order is FP1
+// at 0x29FA8 followed by FP2 at 0x36AC8, derived from the aligned ends of the
+// P3 and FP1 effective streams.  The output name includes "inferred" so it
+// cannot be confused with a recovered historical V2 image or presented as
+// byte-identical.
+//
+// Historical record: headspin's 24 May 2005 post states that V2 was V1 plus
+// health-screen removal for direct .ds.gba boot and removed future SL1-shorting;
+// a follow-up by FourScience says a V1-to-V2 update reported that no further SL1
+// short was needed.  See ../CHANGELOG.md for source links and reliability notes.
+//
+// =============================================================================
+// 证据与重建范围（中文）
+// =============================================================================
+//
+// 本目录没有使用、也不宣称找回了原始 FlashMe V2 载荷。这是根据已知的 V1、V3 Phat
+// 载荷及同期论坛记录推断出的功能性重建。其有意限定为 V1 的基础行为，加上 V2 所述的
+// 一项变化：从 .ds.gba 直接启动时跳过健康警告路径。其组件构造与物理顺序均统一沿用 V1，
+// 即 P3 -> FP1 -> FP2；不会带入 V3 缩短后的显示时序门或重写后的 FP2 前置代码。已提取的
+// V1、V3 P3 字节完全相同，因此组件证据不存在差异时，本工程不会凭空假定一项 V3 专有的
+// P3/RSA 选择。
+//
+// 一级 H/P1/P2/P3/P4/P5 布局沿用 V1。已知的 V1、V3 Phat 镜像在镜像偏移
+// 0x00000--0x0FFFF 完全一致；本重建保持该共用保护区。选定的二级顺序为：FP1 位于
+// 0x29FA8，随后 FP2 位于 0x36AC8，分别由 P3 与 FP1 有效流的对齐结尾推导得出。输出文件名
+// 含有 "inferred"，避免被误认为是找回的历史 V2 镜像或可作逐字节一致性声明的文件。
+//
+// 历史记录方面：headspin 在 2005-05-24 的帖子称 V2 是 V1 加上直接 .ds.gba 启动时
+// 移除健康屏幕，并移除了之后更新再短接 SL1 的要求；FourScience 的后续帖也称其从 V1
+// 升级到 V2 时已提示不再需要短接 SL1。来源链接及可靠性说明见 ../CHANGELOG.md。
 //
 // =============================================================================
 // Whole-program boot map (English)
@@ -65,8 +112,9 @@
 // P4 and P5 are retained unchanged.  H and FH are both based on the original
 // H, but H describes primary P1/P2 whereas FH describes FP1/FP2.  dsfwtool
 // supplies their calculated component locations and CRCs during packing.
-// FlashMe-owned H/FH +0x17C stores the type marker, while +0x17E retains the
-// original P1/P2 CRC16 as the source-firmware marker.
+// FlashMe-owned H/FH +0x17C stores the type marker, while +0x17E preserves the
+// source header's tail value (FFFF in the known V1/V3 Phat templates), rather
+// than copying or recalculating H's P1/P2 CRC16.
 //
 // The chronological outline stays in plain text; each component file appends one
 // comment-only C flow model after its assembly implementation.
@@ -129,7 +177,8 @@
 // P3 不属于这次即时的双 CPU 交接。对它的修改会绕过原本会拒绝改写后固件内容的零售
 // 验证路径；P4 与 P5 保持原样。H 与 FH 都以原始 H 为基础：H 描述一级 P1/P2，FH
 // 描述 FP1/FP2；打包时由 dsfwtool 填入重新计算的组件位置与 CRC。FlashMe 自有的
-// H/FH +0x17C 保存类型标记，+0x17E 则保留原始 P1/P2 CRC16，作为来源固件标记。
+// H/FH +0x17C 保存类型标记，+0x17E 则保留源头部尾值（已知 V1/V3 Phat 模板中为
+// FFFF），而不是复制或重算 H 的 P1/P2 CRC16。
 //
 // 以下时间纲要保持普通文字；每个组件文件都会在其汇编实现后附上一份仅作注释的 C 流程模型。
 //

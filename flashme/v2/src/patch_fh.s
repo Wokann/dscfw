@@ -36,10 +36,16 @@
     .orga HeaderTypeOffset
     .dh FlashMeTypeId
 
-    // English: Copy the same original retail P1/P2 CRC16 marker used by H so
-    // both headers identify the firmware family from which this patch derives.
-    // 中文：复制与 H 相同的原始零售 P1/P2 CRC16 标记，使两个头均能识别本补丁所基于
-    // 的固件系列。
-    .orga HeaderOriginalVersionOffset
-    .incbin "temp/h.bin", HeaderPart12Crc16Offset, 2
+    // English: Match H's V1/V3-compatible Wi-Fi configuration checksum
+    // placeholder even before dsfwtool performs its H-to-FH synchronization.
+    // 中文：即使在 dsfwtool 执行 H 到 FH 的同步前，也要让 FH 与 H 一样使用兼容
+    // V1/V3 的 Wi-Fi 配置校验占位值。
+    .orga HeaderWifiConfigCrc16Offset
+    .dh 0xffff
+
+    // English: +0x17E is left unchanged after the source-header copy.  During
+    // packaging dsfwtool synchronizes FH from the completed H, so FH inherits
+    // H's preserved source value (FFFF in known V1/V3 Phat templates).
+    // 中文：复制源头后，+0x17E 保持不变。打包时 dsfwtool 会由完成后的 H 同步 FH，
+    // 因此 FH 会继承 H 保留的源值（已知 V1/V3 Phat 模板中为 FFFF）。
 .close

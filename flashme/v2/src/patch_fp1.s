@@ -161,35 +161,28 @@ fp1_retail:
     // 保留的主体可以继续使用原有绝对地址；前置代码并没有搬移它。
     .incbin "temp/p1.bin"
 
-    // English: V2 changes the register transfer at retail P1 +0x2DC from
-    // `mov r7, r2` to `mov r3, r4`.  This lies in a Thumb dispatch sequence;
-    // it redirects the value preserved for the following helper call without
-    // relocating that helper or its surrounding table.
-    // 中文：V2 把零售 P1 +0x2DC 的寄存器传递由 `mov r7, r2` 改为
-    // `mov r3, r4`。它位于 Thumb 分派序列中，会改变后续辅助调用所保留的值，
-    // 但不会搬移该辅助函数或其周边跳转表。
+    // English: This inferred V2 pair is deliberately smaller than V3's four
+    // retained-P1 edits.  +0x2DC is a signed halfword in the state-zero jump
+    // table, not executed Thumb code: 0x0017 selects the existing +0x0AAC
+    // handler and 0x0023 selects the existing +0x0884 handler.  The latter is
+    // the alternate startup-state path used by V3.  V2 therefore changes only
+    // this table entry and the branch below which otherwise skips its state
+    // handling.  The V1 0x0F timing gates at +0x89E and +0x8BA are intentionally
+    // retained, so V3's shortened display/fade timing is not imported.
+    //
+    // 中文：这对推断出的 V2 修改刻意小于 V3 的四处保留 P1 改动。+0x2DC 是状态 0
+    // 跳转表中的有符号半字，而不是会执行的 Thumb 代码：0x0017 会选择已有的 +0x0AAC
+    // 处理程序，0x0023 会选择已有的 +0x0884 处理程序；后者正是 V3 使用的替代启动状态
+    // 路径。因此 V2 只改这一项表值，以及下方原本会跳过其状态处理的分支。+0x89E 与
+    // +0x8BA 的 V1 版 0x0F 时序门会刻意保留，故不会带入 V3 缩短后的显示/渐变时序。
     .orga FlashMePrefixBytes + 0x2dc
-    .thumb
-    lsl r3, r4, #0
+    .dh 0x0023
 
-    // English: The retail counter gates at +0x89E and +0x8BA originally test
-    // for 0x0F.  V2 changes both limits to one, allowing the associated setup
-    // path after its first qualifying iteration rather than the sixteenth.
-    // 中文：零售代码 +0x89E 与 +0x8BA 的计数器门槛原本测试 0x0F。V2 将两个
-    // 限制都改为 1，因此相关初始化路径会在第一次符合条件的迭代后进入，而非第十六次。
-    .orga FlashMePrefixBytes + 0x89e
-    .thumb
-    cmp r1, #1
-
-    .orga FlashMePrefixBytes + 0x8ba
-    .thumb
-    cmp r0, #1
-
-    // English: At retail P1 +0x8CE, the original unconditional branch skips
-    // the following state-handling block.  The exact zero Thumb halfword is a
-    // no-operation (`lsl r0, r0, #0`), so execution falls through that block.
-    // 中文：零售 P1 +0x8CE 原有的无条件跳转会越过随后的状态处理块。这里写入
-    // 精确的零值 Thumb 半字，即无操作 `lsl r0, r0, #0`，使执行流落入该代码块。
+    // English: At retail P1 +0x8CE, replace the original unconditional branch
+    // with Thumb's zero NOP so the selected alternate handler can fall through
+    // into its existing state-handling block.
+    // 中文：在零售 P1 +0x8CE，把原有无条件跳转替换为 Thumb 的零值 NOP，使选中的
+    // 替代处理程序能够顺序进入其已有的状态处理块。
     .orga FlashMePrefixBytes + 0x8ce
     .thumb
     lsl r0, r0, #0
@@ -302,14 +295,17 @@ fp1_retail:
 //     RestoreContextAndJump(&context);
 // }
 //
-// static void ApplyV2RetailP1CompatibilityPatches(volatile u16 *retailP1)
+// static void ApplyInferredV2RetailP1Patches(volatile u16 *retailP1)
 // {
-//     // English: These are component-relative Thumb instruction replacements.
-//     // 中文：以下均为相对于组件的 Thumb 指令替换。
-//     retailP1[0x02dc / sizeof(*retailP1)] = ThumbMovR3R4;
-//     retailP1[0x089e / sizeof(*retailP1)] = ThumbCmpR1Immediate1;
-//     retailP1[0x08ba / sizeof(*retailP1)] = ThumbCmpR0Immediate1;
+//     // English: +0x02DC is state-table data, not an instruction.  The V1
+//     // counter gates at +0x089E/+0x08BA are intentionally left untouched.
+//     // 中文：+0x02DC 是状态表数据，而非指令。+0x089E/+0x08BA 的 V1 计数门
+//     // 会刻意保持不变。
+//     retailP1[0x02dc / sizeof(*retailP1)] = 0x0023;
 //     retailP1[0x08ce / sizeof(*retailP1)] = ThumbNopZero;
+//
+//     // English: These two callback fall-through edits are inherited from V1.
+//     // 中文：以下两处回调落入修改继承自 V1。
 //     retailP1[0x6de6 / sizeof(*retailP1)] = ThumbNopZero;
 //     retailP1[0x6e3c / sizeof(*retailP1)] = ThumbNopZero;
 // }
@@ -334,10 +330,11 @@ fp1_retail:
 //
 // FP1's prefix is placed immediately before the retail P1 entry, so the
 // retained body runs at its original address and keeps its absolute-address
-// assumptions.  The six V2 Thumb edits below apply only after control enters
-// that retained body.  They adjust dispatch data flow, counter gates, and
-// callback fall-throughs; they remain deliberately separate from the phase and
-// memory-preparation work implemented by the prefix.
+// assumptions.  The two inferred V2 edits and two inherited V1 callback edits
+// below apply only after control enters that retained body.  The V2 pair selects
+// an existing alternate startup state and permits its state handling; it remains
+// deliberately separate from the phase and memory-preparation work implemented
+// by the prefix.
 //
 // =============================================================================
 // 协同与设计解析（中文）
@@ -354,6 +351,6 @@ fp1_retail:
 // 上下文交接安装四字 ARM9 返回跳板。
 //
 // FP1 前置代码被放在零售 P1 入口之前，因此保留主体仍在原始地址运行，能够保留绝对
-// 地址假设。下方六处 V2 Thumb 半字修改只会在控制权进入该保留主体后才会生效；它们会
-// 调整分派数据流、计数器门槛与回调落入路径，并刻意与前置代码负责的阶段同步和内存准备
-// 工作分离。
+// 地址假设。下方两处推断的 V2 修改及两处继承自 V1 的回调修改只会在控制权进入该保留
+// 主体后才会生效。V2 的一对改动会选择已有的替代启动状态并允许其状态处理，其与前置代码
+// 负责的阶段同步和内存准备工作刻意分离。

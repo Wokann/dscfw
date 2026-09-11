@@ -105,6 +105,10 @@
 .definelabel HeaderPart1RamaddrOffset,      0x00e
 .definelabel HeaderPart2RamaddrOffset,      0x012
 .definelabel HeaderShiftAmountsOffset,      0x014
+// The historical V1/V3 Phat template leaves this Wi-Fi configuration checksum
+// as FFFF rather than carrying the retail source-header checksum.
+// 历史 V1/V3 Phat 模板会将此 Wi-Fi 配置校验保留为 FFFF，而不是沿用零售源头的校验。
+.definelabel HeaderWifiConfigCrc16Offset,   0x02a
 
 // The part*_ramaddr fields encode a RAM address relative to these format
 // bases; they are not the runtime addresses selected by FlashMe below.
@@ -182,8 +186,11 @@
     .error "FlashMe: FP1 prefix overlaps the dynamic primary P1 staging page"
 .endif
 
-// FlashMe-owned header-tail fields.  +0x17c selects the FlashMe type; +0x17e
-// preserves the original P1/P2 CRC16 marker rather than an official field.
+// FlashMe-owned header-tail fields.  +0x17c selects the FlashMe type.  +0x17e
+// is preserved verbatim from the source header; known V1/V3 Phat templates use
+// FFFF there, so it must not be synthesized from the P1/P2 CRC16.
+// FlashMe 自有的头尾字段中，+0x17c 选择 FlashMe 类型。+0x17e 会逐字节保留源头部
+// 的值；已知 V1/V3 Phat 模板此处为 FFFF，故不可由 P1/P2 CRC16 合成。
 .definelabel HeaderTypeOffset,              0x17c
 .definelabel HeaderOriginalVersionOffset,   0x17e
 .definelabel PrimaryTypeId,                 0x0001

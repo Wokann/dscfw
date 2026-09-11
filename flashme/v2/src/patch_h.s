@@ -37,11 +37,17 @@
     .orga HeaderTypeOffset
     .dh PrimaryTypeId
 
-    // English: Preserve the retail P1/P2 CRC16 as FlashMe's source-firmware
-    // marker.  The real H P1/P2 CRC is replaced later after new components are
-    // packed, so this copied value remains the stable identity reference.
-    // 中文：把零售 P1/P2 CRC16 保留为 FlashMe 的原始固件标记。实际 H 的 P1/P2
-    // CRC 会在新组件打包后重算，因此这个复制值可作为稳定的来源识别依据。
-    .orga HeaderOriginalVersionOffset
-    .incbin "temp/h.bin", HeaderPart12Crc16Offset, 2
+    // English: The known V1/V3 Phat headers deliberately leave the Wi-Fi
+    // configuration checksum as FFFF.  Retain that historical header value
+    // instead of carrying the retail V3 checksum into the FlashMe header.
+    // 中文：已知 V1/V3 Phat 头会刻意把 Wi-Fi 配置校验保留为 FFFF。此处保留该历史
+    // 头部值，而不是把零售 V3 的校验带入 FlashMe 头。
+    .orga HeaderWifiConfigCrc16Offset
+    .dh 0xffff
+
+    // English: +0x17E remains untouched after the initial source-header copy.
+    // Known V1/V3 Phat templates contain FFFF here; this field is not a copy of
+    // H +0x006 and is not recomputed by the patch.
+    // 中文：初始复制源头后，+0x17E 保持不改。已知 V1/V3 Phat 模板此处为 FFFF；
+    // 它不是 H +0x006 的副本，也不会由补丁重算。
 .close

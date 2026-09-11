@@ -38,14 +38,13 @@
 fp2_check_boot_state:
     // This is deliberately not a 16-byte string comparison.  It selects the
     // flash route when Slot-2 title[12..15] is "PASS", or when title[0..7]
-    // is "DSBooter".  V2 stores only these twelve signature bytes; the fifth
-    // word loaded by the fixed register block is the following instruction and
-    // is intentionally not tested.
+    // is "DSBooter".  V2 retains V1's complete sixteen-byte stored signature;
+    // the trailing "FLSH" word is loaded but not tested by this predicate.
     // 这里刻意不是 16 字节字符串比较。当 Slot-2 标题的 [12..15] 为 "PASS"，
-    // 或 [0..7] 为 "DSBooter" 时，会选择 flash 路径。V2 只保存这十二个签名字节；
-    // 固定寄存器块读取的第五个字是后续指令，且本判定有意不会使用它。
+    // 或 [0..7] 为 "DSBooter" 时，会选择 flash 路径。V2 保留 V1 的完整十六字节
+    // 签名字串；末尾的 "FLSH" 字虽会被载入，但本判定不会直接比较它。
     adr r0, fp2_boot_state
-    ldmia r0, {r1-r4}
+    ldmia r0, {r1-r5}
     ldmia r1, {r6-r9}
     // title[12..15] == "PASS".
     // title[12..15] == "PASS"。
@@ -100,7 +99,7 @@ fp2_ipc_call:
 fp2_boot_state:
     .dw GbaRomTitleAddress
 fp2_boot_signature:
-    .ascii "DSBooterPASS"
+    .ascii "DSBooterPASSFLSH"
 
 fp2_flash_boot:
     // Publish ARM9-visible phase 0xC: FP1 will begin its cold preparation.
@@ -136,8 +135,8 @@ fp2_wait_d:
     and r0, r0, #0x0f
     cmp r0, #0x0d
     bne fp2_wait_d
-    ldr r12, [fp2_slot_arm7_return]
-    bx r12
+    ldr lr, [fp2_slot_arm7_return]
+    bx lr
 
 fp2_copy:
     ldr r3, [fp2_slot_bios_copy]

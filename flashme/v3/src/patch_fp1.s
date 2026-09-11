@@ -161,16 +161,15 @@ fp1_retail:
     // 保留的主体可以继续使用原有绝对地址；前置代码并没有搬移它。
     .incbin "temp/p1.bin"
 
-    // English: V3 changes the register transfer at retail P1 +0x2DC from
-    // `mov r7, r2` to `mov r3, r4`.  This lies in a Thumb dispatch sequence;
-    // it redirects the value preserved for the following helper call without
-    // relocating that helper or its surrounding table.
-    // 中文：V3 把零售 P1 +0x2DC 的寄存器传递由 `mov r7, r2` 改为
-    // `mov r3, r4`。它位于 Thumb 分派序列中，会改变后续辅助调用所保留的值，
-    // 但不会搬移该辅助函数或其周边跳转表。
+    // English: +0x2DC is a signed halfword in the retail state-zero jump
+    // table, not executed Thumb code.  V3 changes it from 0x0017 (the existing
+    // +0x0AAC handler) to 0x0023 (the existing +0x0884 handler), redirecting
+    // the initial state without relocating either handler or its table.
+    // 中文：+0x2DC 是零售状态 0 跳转表中的有符号半字，并非会执行的 Thumb 代码。
+    // V3 将其从 0x0017（已有 +0x0AAC 处理程序）改为 0x0023（已有 +0x0884
+    // 处理程序），从而重定向初始状态，不会搬移任一处理程序或其跳转表。
     .orga FlashMePrefixBytes + 0x2dc
-    .thumb
-    lsl r3, r4, #0
+    .dh 0x0023
 
     // English: The retail counter gates at +0x89E and +0x8BA originally test
     // for 0x0F.  V3 changes both limits to one, allowing the associated setup
@@ -304,9 +303,10 @@ fp1_retail:
 //
 // static void ApplyV3RetailP1CompatibilityPatches(volatile u16 *retailP1)
 // {
-//     // English: These are component-relative Thumb instruction replacements.
-//     // 中文：以下均为相对于组件的 Thumb 指令替换。
-//     retailP1[0x02dc / sizeof(*retailP1)] = ThumbMovR3R4;
+//     // English: +0x02DC is jump-table data; the remaining values are Thumb
+//     // instruction replacements.  中文：+0x02DC 是跳转表数据；其余值为
+//     // Thumb 指令替换。
+//     retailP1[0x02dc / sizeof(*retailP1)] = 0x0023;
 //     retailP1[0x089e / sizeof(*retailP1)] = ThumbCmpR1Immediate1;
 //     retailP1[0x08ba / sizeof(*retailP1)] = ThumbCmpR0Immediate1;
 //     retailP1[0x08ce / sizeof(*retailP1)] = ThumbNopZero;
