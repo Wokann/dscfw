@@ -15,14 +15,14 @@
     // 历史 V6 会在入口保留这个随后会被覆盖的设置字。它以指令形式保留，而不是被
     // 静默删除，因为它决定后续所有 V6 前置代码偏移。
     mov r0, #6
-    ldr r0, =REG_POWERCNT
+    ldr r0, [fp2_slot_powercnt]
     mov r1, #1
     strh r1, [r0]
-    // mov r1, #0x3000, retaining the historical ARM immediate rotation.
-    // mov r1, #0x3000，保留历史 ARM 立即数旋转编码。
-    .dw 0xe3a01dc0
+    // The FlashMe ARMIPS profile selects the historical immediate rotation.
+    // FlashMe ARMIPS 配置会选择历史立即数旋转编码。
+    mov r1, #0x3000
     swi SwiArm7SoundBiasImmediate
-    ldr r10, =REG_KEYINPUT
+    ldr r10, [fp2_slot_keyinput]
     ldrh r0, [r10]
     // KEYINPUT is active-low: Z means Select is physically pressed, so this
     // first test takes the service route before the A/B/X/Y combination check.
@@ -67,21 +67,17 @@ fp2_service_boot:
     // service timing before D; Stealth directly enters retained P2.
     // 发布 ARM9 可见的阶段 0xB。常规 V6 会在 D 之前执行继承的服务时序；
     // Stealth 则直接进入保留 P2。
-    // mov r0, #0x0b00, historical immediate encoding.
-    // mov r0, #0x0b00，使用历史立即数编码。
-    .dw 0xe3a00eb0
+    mov r0, #0x0b00
     strh r0, [r10, #0x50]
 
     .if BuildStealth
-    ldr lr, =Arm9ReturnSlotFp2
+    ldr lr, [fp2_slot_arm9_return]
     ldr lr, [lr]
     b fp2_retail
     .else
-    // The V6 source uses the following exact non-canonical immediate forms.
-    // V6 源码使用下列精确的非规范立即数形式。
-    .dw 0xe3a05d40 // mov r5, #0x00001000
-    .dw 0xe3a06b80 // mov r6, #0x00020000
-    .dw 0xe3a07d60 // mov r7, #0x00001800
+    mov r5, #0x1000
+    mov r6, #0x20000
+    mov r7, #0x1800
 
 fp2_service_loop:
     mov r0, r5
@@ -93,9 +89,9 @@ fp2_service_loop:
     add r5, r5, r7
     cmp r5, r6
     bmi fp2_service_loop
-    .dw 0xe3a00ed0 // mov r0, #0x00000d00
+    mov r0, #0x0d00
     strh r0, [r10, #0x50]
-    ldr lr, =Arm9ReturnSlotFp2
+    ldr lr, [fp2_slot_arm9_return]
     ldr lr, [lr]
     b fp2_retail
 
@@ -122,15 +118,15 @@ fp2_boot_signature:
 fp2_flash_boot:
     // Publish ARM9-visible phase 0xC: FP1 will begin its cold preparation.
     // 发布 ARM9 可见的阶段 0xC：FP1 将开始冷启动准备。
-    .dw 0xe3a00ec0 // mov r0, #0x00000c00
+    mov r0, #0x0c00
     strh r0, [r10, #0x50]
-    ldr r0, =FlashMeFirmwareBytes
-    ldr r4, =FlashMeHeaderRamAddress
+    ldr r0, [fp2_slot_firmware_bytes]
+    ldr r4, [fp2_slot_header_ram]
     mov r1, r4
-    .dw 0xe3a02f60 // mov r2, #0x00000180
+    mov r2, #0x180
     bl fp2_copy
     ldrh r1, [r4, #0x70]
-    .dw 0xe2840f40 // add r0, r4, #0x00000100
+    add r0, r4, #0x100
     ldrh r2, [r0, #0x70]
     cmp r2, r1
     mov r1, r4
@@ -138,7 +134,7 @@ fp2_flash_boot:
     swihi SwiArm7CpuFastSetImmediate
     mov r0, #0
     mov r2, #0x2c
-    ldr r1, =REG_DMA0SAD
+    ldr r1, [fp2_slot_dma0_src]
 
 fp2_clear_dma_range:
     str r0, [r1, r2]
@@ -154,7 +150,7 @@ fp2_clear_dma_range:
     mov r0, #0x00008200
     mov r1, #0
     bl fp2_spi_write
-    .dw 0xe3a01ed0 // mov r1, #0x00000d00
+    mov r1, #0x0d00
 
 fp2_wait_d:
     strh r1, [r10, #0x50]
@@ -162,11 +158,11 @@ fp2_wait_d:
     and r0, r0, #0x0f
     cmp r0, #0x0d
     bne fp2_wait_d
-    ldr r12, =Arm7ReturnEntry
+    ldr r12, [fp2_slot_arm7_return]
     bx r12
 
 fp2_spi_write:
-    ldr r3, =REG_SPICNT
+    ldr r3, [fp2_slot_spicnt]
 
 fp2_spi_wait:
     ldrh r2, [r3]
@@ -177,23 +173,47 @@ fp2_spi_wait:
     bx lr
 
 fp2_copy:
-    ldr r3, =BiosCopyRoutine
+    ldr r3, [fp2_slot_bios_copy]
     bx r3
 
 fp2_ipc_send:
-    ldr r3, =BiosIpcSendRoutine
+    ldr r3, [fp2_slot_bios_ipc_send]
     bx r3
 
 fp2_boot_return:
-    ldr r3, =BiosBootReturnRoutine
+    ldr r3, [fp2_slot_bios_boot_return]
     bx r3
     // One historical ARM NOP word separates the short BIOS veneers from the
     // V6 literal pool.  It is layout padding, not executable route logic.
     // 一个历史 ARM NOP 字将短 BIOS veneer 与 V6 字面量池分隔开；它是布局填充，
     // 而不是可执行的路径逻辑。
+fp2_slot_padding:
     .dw 0x00000000
 
-    .pool
+// Keep the explicitly ordered slots after the historical separator word.
+// 让显式槽紧随历史分隔字之后。
+fp2_slot_powercnt:
+    .dw REG_POWERCNT
+fp2_slot_keyinput:
+    .dw REG_KEYINPUT
+fp2_slot_arm9_return:
+    .dw Arm9ReturnSlotFp2
+fp2_slot_firmware_bytes:
+    .dw FlashMeFirmwareBytes
+fp2_slot_header_ram:
+    .dw FlashMeHeaderRamAddress
+fp2_slot_dma0_src:
+    .dw REG_DMA0SAD
+fp2_slot_arm7_return:
+    .dw Arm7ReturnEntry
+fp2_slot_spicnt:
+    .dw REG_SPICNT
+fp2_slot_bios_copy:
+    .dw BiosCopyRoutine
+fp2_slot_bios_ipc_send:
+    .dw BiosIpcSendRoutine
+fp2_slot_bios_boot_return:
+    .dw BiosBootReturnRoutine
     .endarea
 
 fp2_retail:

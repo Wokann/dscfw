@@ -10,9 +10,13 @@
     // LDR/BX pair loops until primary P2 publishes a continuation at +0x08.
     // V6 是纯等待闸门：字面量初值为自身入口，因此 LDR/BX 会循环，直至一级 P2
     // 在 +0x08 发布续接地址。
-    ldr r0, =PrimaryP1RamAddress
+    // The mutable continuation word is a named slot, so armips derives the
+    // PC-relative displacement instead of the source carrying one by hand.
+    // 可修改的续接字使用命名槽，因此由 armips 推导 PC 相对位移，而不是在源码中手写。
+    ldr r0, [p1_handoff_slot]
     bx r0
-    .pool
+p1_handoff_slot:
+    .dw PrimaryP1RamAddress
 p1_primary_end:
     // Keep the primary gate inside the dynamically selected 64 KiB staging page.
     // 确保一级闸门始终位于动态选定的 64 KiB 暂存页之内。
