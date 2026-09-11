@@ -21,7 +21,7 @@ p2_thumb:
     mov r1, #0x0d
     mov r2, #0
     bl p2_swi
-    add r7, pc, #0x20
+    adr r7, p2_boot_parameters_data
     ldmia r7!, {r0-r2, r4-r6}
     ldrh r1, [r1]
     lsl r1, r1, #28
@@ -40,7 +40,7 @@ p2_copy_boot:
     b p2_handoff
 
 p2_swi:
-    ldr r3, =PrimaryP2SwiRoutine
+    ldr r3, [p2_slot_swi_routine]
     mov r0, #0
     bx r3
 
@@ -54,12 +54,23 @@ p2_boot_parameters:
     // 读取例程、Thumb LZ77 入口及 Slot-2 标题位置。随后 p2_copy_boot 会使用后面
     // 五个字，在 0x023FFE24 构造小型 ARM9 跳板。
     .dh 0x0000
+p2_boot_parameters_data:
     .dw FlashMePrimaryHeaderAddress, REG_KEYINPUT
     .ascii "BOOT"
-    .dw BiosCopyRoutine, 0x00002a2b, 0x080000ac, 0x023ffe28
+    .dw BiosCopyRoutine, 0x00002a2b, 0x080000ac
     // ARM trampoline copied by the alternate route before the shared hand-off.
     // 兼容分支会在进入共同交接尾部前复制这段 ARM 跳板。
-    .dw 0xe51f000c, 0xe12fff10, 0x023ffe24, PrimaryP1RamAddress
+p2_arm9_trampoline_entry:
+    .dw 0x023ffe28
+    .arm
+p2_arm9_trampoline_load:
+    ldr r0, [p2_arm9_trampoline_entry]
+    bx r0
+    .thumb
+p2_arm9_trampoline_return_slot:
+    .dw 0x023ffe24
+p2_arm9_trampoline_primary_p1:
+    .dw PrimaryP1RamAddress
 
     .orga 0x68
 p2_service_boot:
@@ -72,14 +83,14 @@ p2_service_boot:
     bl p2_compute
     mov r7, r11
     ldrh r4, [r7, #0x14]
-    ldr r1, =FirmwarePart1RamaddrBase
+    ldr r1, [p2_slot_part1_ram_base]
     bl p2_compute_address
-    ldr r1, =FirmwarePart2RamaddrBase
+    ldr r1, [p2_slot_part2_ram_base]
     lsr r4, r4, #6
     add r7, #4
     bl p2_compute_address
     pop {r6, r7}
-    ldr r4, =PrimaryP1RamAddress
+    ldr r4, [p2_slot_primary_p1_ram]
     // r7 is the ARM9 continuation yielded by the retail loading path.  Updating
     // this word is what wakes P1; it is not an ordinary cross-CPU function call.
     // r7 是零售加载路径产生的 ARM9 续接地址。更新该字才会唤醒 P1；这不是普通的
@@ -91,7 +102,7 @@ p2_handoff:
     mov r0, sp
     mov r1, r11
     mov r2, #0xff
-    ldr r4, =PrimaryP2ComputeRoutine
+    ldr r4, [p2_slot_compute_routine]
 
 p2_compute:
     bx r4
@@ -108,7 +119,7 @@ p2_compute_address:
     lsl r2, r3
     lsl r2, r2, #2
     sub r1, r1, r2
-    add r3, pc, #0x30
+    adr r3, p2_legacy_callback_table
     push {r1}
     bx r5
 
@@ -120,14 +131,14 @@ p2_compute_address:
 p2_legacy_thunk:
     push {r0, lr}
     mov r2, #0
-    ldr r3, =PrimaryP2LegacyCallRoutine
+    ldr r3, [p2_slot_legacy_call]
     bl p2_legacy_call
     mov r0, sp
     mov r1, #4
     mov r2, #1
-    ldr r3, =PrimaryP2LegacyCopyRoutine
+    ldr r3, [p2_slot_legacy_copy]
     bl p2_legacy_call
-    ldr r1, =REG_SPIDATA
+    ldr r1, [p2_slot_spidata]
     strh r0, [r1]
     pop {r0, r3}
 
@@ -135,7 +146,7 @@ p2_legacy_call:
     bx r3
 
 p2_legacy_wait:
-    ldr r1, =REG_SPICNT
+    ldr r1, [p2_slot_spicnt]
 
 p2_legacy_wait_busy:
     ldrh r0, [r1]
@@ -151,8 +162,29 @@ p2_legacy_wait_busy:
     // is retained without assigning an unverified semantic role.
     // 这三个字是保留的历史 pool 项。两个 Thumb 指针分别指向本地 ABI 桥与等待循环；
     // 中间固定值会被保留，但不赋予未经验证的语义角色。
-    .dw p2_legacy_thunk + 1, PrimaryP2LegacyCallbackValue, p2_legacy_wait + 1
-    .pool
+p2_legacy_callback_table:
+    .dw p2_legacy_thunk + 1
+    .dw PrimaryP2LegacyCallbackValue
+    .dw p2_legacy_wait + 1
+
+p2_slot_swi_routine:
+    .dw PrimaryP2SwiRoutine
+p2_slot_part1_ram_base:
+    .dw FirmwarePart1RamaddrBase
+p2_slot_part2_ram_base:
+    .dw FirmwarePart2RamaddrBase
+p2_slot_primary_p1_ram:
+    .dw PrimaryP1RamAddress
+p2_slot_compute_routine:
+    .dw PrimaryP2ComputeRoutine
+p2_slot_legacy_call:
+    .dw PrimaryP2LegacyCallRoutine
+p2_slot_legacy_copy:
+    .dw PrimaryP2LegacyCopyRoutine
+p2_slot_spidata:
+    .dw REG_SPIDATA
+p2_slot_spicnt:
+    .dw REG_SPICNT
 p2_primary_end:
     // The primary ARM7 coordinator must remain inside its 2 KiB bootstrap window.
     // 一级 ARM7 协调器必须始终位于其 2 KiB 引导窗口之内。
