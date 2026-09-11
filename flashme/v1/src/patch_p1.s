@@ -7,9 +7,13 @@
     .headersize PrimaryP1RamAddress
     .arm
     str r0, [r12, r0, lsl #3]
-    ldr r0, =PrimaryP1RamAddress + 4
+    // The mutable continuation word is a named slot, so armips derives the
+    // PC-relative displacement instead of the source carrying one by hand.
+    // 可修改的续接字使用命名槽，因此由 armips 推导 PC 相对位移，而不是在源码中手写。
+    ldr r0, [p1_handoff_slot]
     bx r0
-    .pool
+p1_handoff_slot:
+    .dw PrimaryP1RamAddress + 4
     // The historical component ends with one zero word after its LDR literal.
     // 旧版组件在 LDR 字面量之后以一个零字结束。
     .dw 0x00000000
