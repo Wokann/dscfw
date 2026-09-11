@@ -242,7 +242,4 @@
     .definelabel Fp2BootStateOffset,        0x19c
 .endif
 .definelabel Arm9ReturnTrampolineAddress,   0x027fff70
-.definelabel Fp1TrampolinePublishD,         0xe1c780b0
-.definelabel Fp1TrampolineReloadReturn,     0xe599f000
-.definelabel Fp1IpcPhaseD,                  0x00000d00
 .definelabel Fp1ClearSourceAddress,         0xffff0020

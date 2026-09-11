@@ -13,14 +13,14 @@
     // The entry value is retained for byte/layout compatibility with V7 New.
     // 入口值为保持 V7 New 的字节与布局兼容而保留。
     mov r0, #7
-    ldr r0, =REG_POWERCNT
+    ldr r0, [fp2_slot_powercnt]
     mov r1, #1
     strh r1, [r0]
-    .dw 0xe3a01dc0 // mov r1, #0x3000, historical immediate encoding
+    mov r1, #0x3000
     swi SwiArm7SoundBiasImmediate
     bl fp2_clear_dma
 
-    ldr r10, =REG_KEYINPUT
+    ldr r10, [fp2_slot_keyinput]
     ldrh r0, [r10]
     // KEYINPUT and KEYXY are active-low.  Select chooses the service route;
     // A+B+X+Y chooses the FlashMe route.
@@ -66,22 +66,22 @@ fp2_aux_probe:
     mov r0, #0xf1
     bl fp2_aux_transfer
     bl fp2_aux_clear
-    .dw 0xe3a00c80 // mov r0, #0x8000
+    mov r0, #0x8000
     strh r0, [r3]
-    .dw 0xe3a07784 // mov r7, #0x02100000
+    mov r7, #0x02100000
     mov r0, #0
     mov r1, r7
-    .dw 0xe3a02f80 // mov r2, #0x200
+    mov r2, #0x200
     bl fp2_dma_copy
-    ldr r0, =0x0000ffff
+    ldr r0, [fp2_slot_word_ffff]
     add r1, r7, #0xc0
     mov r2, #0x9c
     swi 0x0e0000
-    .dw 0xe2876f40 // add r6, r7, #0x100
+    add r6, r7, #0x100
     ldrh r1, [r6, #0x5c]
     cmp r1, r0
     bne fp2_aux_fallback
-    .dw 0xe3a00ed0 // mov r0, #0x0d00
+    mov r0, #0x0d00
     strh r0, [r10, #0x50]
     ldr r0, [r7, #0x20]
     ldr r1, [r7, #0x28]
@@ -104,21 +104,21 @@ fp2_aux_fallback:
     bl fp2_aux_clear
 
 fp2_service_boot:
-    .dw 0xe3a00eb0 // mov r0, #0x0b00
+    mov r0, #0x0b00
     strh r0, [r10, #0x50]
 
     .if BuildStealth
         // Stealth B returns directly to retained P2.
         // Stealth 的 B 路径直接返回保留 P2。
-        ldr lr, =Arm9ReturnSlotFp2
+        ldr lr, [fp2_slot_arm9_return]
         ldr lr, [lr]
         b fp2_retail
     .else
         // Normal V7 New retains the service timing sequence before E.
         // 常规版 V7 New 会在 E 之前保留服务时序。
-        .dw 0xe3a05d40 // mov r5, #0x1000
-        .dw 0xe3a06b80 // mov r6, #0x20000
-        .dw 0xe3a07d60 // mov r7, #0x1800
+        mov r5, #0x1000
+        mov r6, #0x20000
+        mov r7, #0x1800
 
 fp2_service_loop:
         mov r0, r5
@@ -130,9 +130,9 @@ fp2_service_loop:
         add r5, r5, r7
         cmp r5, r6
         bmi fp2_service_loop
-        .dw 0xe3a00ee0 // mov r0, #0x0e00
+        mov r0, #0x0e00
         strh r0, [r10, #0x50]
-        ldr lr, =Arm9ReturnSlotFp2
+        ldr lr, [fp2_slot_arm9_return]
         ldr lr, [lr]
         b fp2_retail
 
@@ -161,22 +161,22 @@ fp2_boot_state:
     .ascii "DSBooterPASS"
 
 fp2_flash_boot:
-    .dw 0xe3a00ec0 // mov r0, #0x0c00
+    mov r0, #0x0c00
     strh r0, [r10, #0x50]
     bl fp2_cold_boot
-    ldr r12, =Arm7ReturnEntry
+    ldr r12, [fp2_slot_arm7_return]
     bx r12
 
 fp2_cold_boot:
     mov r11, lr
     bl fp2_clear_dma
-    ldr r0, =FlashMeFirmwareBytes
-    ldr r4, =FlashMeHeaderRamAddress
+    ldr r0, [fp2_slot_firmware_bytes]
+    ldr r4, [fp2_slot_header_ram]
     mov r1, r4
-    .dw 0xe3a02f60 // mov r2, #0x180
+    mov r2, #0x180
     bl fp2_copy
     ldrh r1, [r4, #0x70]
-    .dw 0xe2840f40 // add r0, r4, #0x100
+    add r0, r4, #0x100
     ldrh r2, [r0, #0x70]
     cmp r2, r1
     mov r1, r4
@@ -200,13 +200,13 @@ fp2_cold_boot:
     bl fp2_lite_setup
 fp2_lite_setup_done:
     bl fp2_boot_return
-    .dw 0xe3a01c8a // mov r1, #0x8a00
+    mov r1, #0x8a00
     mov r0, #0x84
     bl fp2_lite_spi_write
-    .dw 0xe3a01c82 // mov r1, #0x8200
+    mov r1, #0x8200
     mov r0, #0
     bl fp2_lite_spi_write
-    .dw 0xe3a01ee0 // mov r1, #0x0e00
+    mov r1, #0x0e00
 fp2_wait_e:
     strh r1, [r10, #0x50]
     ldrh r0, [r10, #0x50]
@@ -221,13 +221,13 @@ fp2_wait_e:
         .orga 0x258
     .endif
 fp2_aux_enable:
-    ldr r0, =FlashMeAuxSpiControl
-    ldr r3, =REG_AUXSPICNT
+    ldr r0, [fp2_slot_aux_spi_control]
+    ldr r3, [fp2_slot_aux_spicnt]
     strh r0, [r3]
     bx lr
 
 fp2_aux_clear:
-    ldr r3, =REG_AUXSPICNT
+    ldr r3, [fp2_slot_aux_spicnt]
     mov r0, #0
     strh r0, [r3]
     bx lr
@@ -242,15 +242,15 @@ fp2_aux_wait:
     bx lr
 
 fp2_dma_copy:
-    ldr r4, =REG_DMA0SAD
+    ldr r4, [fp2_slot_dma0_sad]
     mov r5, #0
     str r5, [r4, #8]
-    ldr r5, =REG_GCDATAIN
+    ldr r5, [fp2_slot_gc_data_in]
     str r5, [r4]
     str r1, [r4, #4]
-    ldr r5, =DmaCardCopyControl
+    ldr r5, [fp2_slot_dma_card_control]
     str r5, [r4, #8]
-    ldr r3, =REG_AUXSPICNT
+    ldr r3, [fp2_slot_aux_spicnt]
     mov r4, #0xa4
     strb r4, [r3, #8]
     mov r4, r0, lsr #8
@@ -260,15 +260,15 @@ fp2_dma_copy:
     mov r4, #0
     strb r4, [r3, #9]
     str r4, [r3, #0x0c]
-    .dw 0xe3a044a9 // mov r4, #0xa9000000
+    mov r4, #0xa9000000
     str r4, [r3, #4]
-    .dw 0xe2800f80 // add r0, r0, #0x200
-    .dw 0xe2811f80 // add r1, r1, #0x200
+    add r0, r0, #0x200
+    add r1, r1, #0x200
 fp2_dma_wait:
     ldr r4, [r3, #4]
-    .dw 0xe3140480 // tst r4, #0x80000000
+    tst r4, #0x80000000
     bne fp2_dma_wait
-    .dw 0xe2522f80 // subs r2, r2, #0x200
+    subs r2, r2, #0x200
     bgt fp2_dma_copy
     bx lr
 
@@ -279,13 +279,13 @@ fp2_dma_wait:
     .endif
 fp2_lite_setup:
     stmdb sp!, {r1,lr}
-    ldr r1, =LiteSpiInitialControl
+    ldr r1, [fp2_slot_lite_spi_initial]
     bl fp2_lite_spi_write
     ldmia sp!, {r0,lr}
-    ldr r1, =LiteSpiFollowupControl
+    ldr r1, [fp2_slot_lite_spi_followup]
 
 fp2_lite_spi_write:
-    ldr r3, =REG_SPICNT
+    ldr r3, [fp2_slot_spicnt]
 fp2_lite_spi_wait:
     ldrh r2, [r3]
     tst r2, #0x80
@@ -302,7 +302,7 @@ fp2_lite_spi_wait_read:
 fp2_clear_dma:
     mov r0, #0
     mov r2, #0x2c
-    ldr r1, =REG_DMA0SAD
+    ldr r1, [fp2_slot_dma0_sad]
 fp2_clear_dma_loop:
     str r0, [r1, r2]
     subs r2, r2, #4
@@ -310,15 +310,15 @@ fp2_clear_dma_loop:
     bx lr
 
 fp2_copy:
-    ldr r3, =BiosCopyRoutine
+    ldr r3, [fp2_slot_bios_copy]
     bx r3
 
 fp2_ipc_send:
-    ldr r3, =BiosIpcSendRoutine
+    ldr r3, [fp2_slot_bios_ipc_send]
     bx r3
 
 fp2_boot_return:
-    ldr r3, =BiosBootReturnRoutine
+    ldr r3, [fp2_slot_bios_boot_return]
     bx r3
 
     // The original binary's literal pool is part of its executable layout.
@@ -329,7 +329,42 @@ fp2_boot_return:
     .else
         .orga 0x378
     .endif
-    .pool
+fp2_slot_powercnt:
+    .dw REG_POWERCNT
+fp2_slot_keyinput:
+    .dw REG_KEYINPUT
+fp2_slot_word_ffff:
+    .dw 0x0000ffff
+fp2_slot_arm9_return:
+    .dw Arm9ReturnSlotFp2
+fp2_slot_arm7_return:
+    .dw Arm7ReturnEntry
+fp2_slot_firmware_bytes:
+    .dw FlashMeFirmwareBytes
+fp2_slot_header_ram:
+    .dw FlashMeHeaderRamAddress
+fp2_slot_aux_spi_control:
+    .dw FlashMeAuxSpiControl
+fp2_slot_aux_spicnt:
+    .dw REG_AUXSPICNT
+fp2_slot_dma0_sad:
+    .dw REG_DMA0SAD
+fp2_slot_gc_data_in:
+    .dw REG_GCDATAIN
+fp2_slot_dma_card_control:
+    .dw DmaCardCopyControl
+fp2_slot_lite_spi_initial:
+    .dw LiteSpiInitialControl
+fp2_slot_lite_spi_followup:
+    .dw LiteSpiFollowupControl
+fp2_slot_spicnt:
+    .dw REG_SPICNT
+fp2_slot_bios_copy:
+    .dw BiosCopyRoutine
+fp2_slot_bios_ipc_send:
+    .dw BiosIpcSendRoutine
+fp2_slot_bios_boot_return:
+    .dw BiosBootReturnRoutine
     .endarea
 
 fp2_retail:
