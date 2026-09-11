@@ -9,11 +9,11 @@
     .headersize FlashMeFp1RamAddress
     .area FlashMePrefixBytes, 0x00
     .arm
-    // `fp1_context + 0x24` already contains REG_IPC_SYNC for r9.  The original
-    // code loads that existing word instead of emitting a duplicate pool entry.
-    // `fp1_context + 0x24` 已为 r9 保存 REG_IPC_SYNC。原始代码读取该现有字，
-    // 而不是额外生成一项重复的字面量池数据。
-    ldr r10, [pc, #0x124] // ldr r10, =REG_IPC_SYNC
+    // The context already carries REG_IPC_SYNC for r9.  Referencing its named
+    // slot lets armips derive the historical PC-relative displacement.
+    // 上下文已为 r9 保存 REG_IPC_SYNC。引用其命名槽可让 armips 推导历史的
+    // PC 相对位移。
+    ldr r10, [fp1_context_ipc_sync]
 
 fp1_wait_b:
     ldrh r0, [r10]
@@ -21,8 +21,8 @@ fp1_wait_b:
     subs r0, r0, #0x0b
     bmi fp1_wait_b
     bne fp1_cold_boot
-    ldr r0, =REG_POWERCNT
-    ldr r1, =Arm9BootState
+    ldr r0, [fp1_slot_powercnt]
+    ldr r1, [fp1_slot_arm9_boot_state]
     strh r1, [r0]
 
 fp1_wait_d_warm:
@@ -30,14 +30,14 @@ fp1_wait_d_warm:
     and r0, r0, #0x0f
     cmp r0, #0x0d
     bne fp1_wait_d_warm
-    ldr lr, =Arm9ReturnSlot
+    ldr lr, [fp1_slot_arm9_return]
     ldr lr, [lr]
     b fp1_retail
 
 fp1_cold_boot:
     mov r0, #0
     mov r2, #0x2c
-    ldr r1, =DMA0_SRC
+    ldr r1, [fp1_slot_dma0_src]
 
 fp1_clear_dma_control:
     str r0, [r1, r2]
@@ -45,26 +45,23 @@ fp1_clear_dma_control:
     bpl fp1_clear_dma_control
     mov r0, #1
     swi SwiArm9CustomPostImmediate
-    ldr r1, =REG_POWERCNT
+    ldr r1, [fp1_slot_powercnt]
     mov r0, #0
     strh r0, [r1]
-    ldr r4, =VRAM_A_CR
-    ldr r5, =VramLcdcEnableAbcd
+    ldr r4, [fp1_slot_vram_a_cr]
+    ldr r5, [fp1_slot_vram_lcdc_enable_abcd]
     str r5, [r4]
     strh r5, [r4, #4]
     strb r5, [r4, #6]
     strh r5, [r4, #8]
-    // armips emits valid but non-historical encodings for these ARM rotated
-    // immediates.  Retain an exact original word only when an assembly form
-    // cannot select the historical encoding; the comment after it is the
-    // instruction it executes.
-    // 对这些 ARM 旋转立即数，armips 会生成有效但不同于旧版的编码。只有汇编写法
-    // 无法选中历史编码时才保留精确原始字；行末注释给出其实际执行的指令。
-    .dw 0xe3a01668 // mov r1, #VRAM_A (0x06800000)
-    .dw 0xe3a02aa4 // mov r2, #VramLcdcBytes (0x000a4000)
+    // The FlashMe ARMIPS profile selects the historical rotated-immediate
+    // encoding, so these are ordinary instructions rather than raw words.
+    // FlashMe ARMIPS 配置会选择历史的旋转立即数编码，因此此处使用普通指令而非原始字。
+    mov r1, #VRAM_A
+    mov r2, #VramLcdcBytes
     bl fp1_zero_range
     // Disable VRAM banks A-I, then assign all shared WRAM to ARM7.
-    .dw 0xe3a057c0 // mov r5, #(WRAM_0KARM9_32KARM7 << 24)
+    mov r5, #(WRAM_0KARM9_32KARM7 << 24)
     strh r5, [r4]
     strh r5, [r4, #2]
     str r5, [r4, #4]
@@ -75,14 +72,14 @@ fp1_wait_d_cold:
     and r0, r0, #0x0f
     cmp r0, #0x0d
     bne fp1_wait_d_cold
-    ldr r0, =REG_POWERCNT
-    ldr r1, =Arm9BootState
+    ldr r0, [fp1_slot_powercnt]
+    ldr r1, [fp1_slot_arm9_boot_state]
     strh r1, [r0]
-    .dw 0xe3a01670 // mov r1, #OAM (0x07000000)
-    .dw 0xe3a02e80 // mov r2, #MM_OBJRAM_SZ (0x00000800)
+    mov r1, #OAM
+    mov r2, #MM_OBJRAM_SZ
     bl fp1_zero_range
-    .dw 0xe3a01650 // mov r1, #BG_PALETTE (0x05000000)
-    .dw 0xe3a02e80 // mov r2, #MM_PALRAM_SZ (0x00000800)
+    mov r1, #BG_PALETTE
+    mov r2, #MM_PALRAM_SZ
     bl fp1_zero_range
     adr r12, fp1_context
     ldmia r12, {r0-r11}
@@ -104,11 +101,56 @@ fp1_zero_loop:
     .orga 0x108
 fp1_context:
     // Restored into r0-r11; r4-r7 become the installed ARM trampoline.
-    .dw Fp1ContextR0, Fp1ContextR1, Fp1ContextR2, Fp1ContextR3
+fp1_context_r0:
+    .dw Fp1ContextR0
+fp1_context_r1:
+    .dw Fp1ContextR1
+fp1_context_r2:
+    .dw Fp1ContextR2
+fp1_context_r3:
+    .dw Fp1ContextR3
+fp1_context_r4:
     .dw Arm9ReturnSlotNext
-    .dw Fp1TrampolineStoreHalfword, Fp1TrampolineLoadTarget, Fp1TrampolineBranchTarget
-    .dw Fp1ContextR8, REG_IPC_SYNC, Fp1ContextR10, Arm9ReturnSlot
-    .pool
+
+// These three words are copied by the r0-r11 hand-off to Arm9ReturnSlotNext.
+// Rebase only this output range to its runtime location, so actual mnemonics
+// can derive the trampoline's backward LDR target from a named slot.
+// 这三个字会由 r0-r11 交接复制到 Arm9ReturnSlotNext。仅将此输出范围重映射到其
+// 运行时位置，使真实助记符可从命名槽推导跳板的向后 LDR 目标。
+    .headersize Arm9ReturnSlot - orga(fp1_context_r4)
+    .orga orga(fp1_context_r4)
+fp1_runtime_loop_slot:
+    .orga orga(fp1_context_r4) + 4
+fp1_context_r5:
+    strh r10, [r9]
+fp1_context_r6:
+    ldr r0, [fp1_runtime_loop_slot]
+fp1_context_r7:
+    bx r0
+    .headersize FlashMeFp1RamAddress
+fp1_context_r8:
+    .dw Fp1ContextR8
+fp1_context_ipc_sync:
+    .dw REG_IPC_SYNC
+fp1_context_r10:
+    .dw Fp1ContextR10
+fp1_context_r11:
+    .dw Arm9ReturnSlot
+
+// Keep these explicitly ordered slots at the former literal-pool location.
+// 命名槽保持在原字面量池的位置和顺序。
+fp1_slot_powercnt:
+    .dw REG_POWERCNT
+fp1_slot_arm9_boot_state:
+    .dw Arm9BootState
+fp1_slot_arm9_return:
+    .dw Arm9ReturnSlot
+fp1_slot_dma0_src:
+    .dw DMA0_SRC
+fp1_slot_vram_a_cr:
+    .dw VRAM_A_CR
+fp1_slot_vram_lcdc_enable_abcd:
+    .dw VramLcdcEnableAbcd
     .endarea
 
 fp1_retail:
