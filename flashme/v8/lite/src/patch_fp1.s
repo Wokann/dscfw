@@ -12,10 +12,9 @@
     .area FlashMePrefixBytes, 0x00
     .arm
 
-    // IPC_SYNC is stored inside the variant-specific hand-off context.  The
-    // direct PC-relative load intentionally preserves the historical layout.
-    // IPC_SYNC 存在于按变体区分的交接上下文中。此处直接使用 PC 相对读取，以保留历史布局。
-    ldr r10, [pc, #Fp1ContextOffset + 4]
+    // IPC_SYNC is stored inside the variant-specific hand-off context.
+    // IPC_SYNC 存在于按变体区分的交接上下文中。
+    ldr r10, [fp1_context_ipc_sync]
 
 fp1_wait_b:
     ldrh r0, [r10]
@@ -30,7 +29,7 @@ fp1_wait_b:
     // the historical continuation slot at 0x02100024.
     // 继承路径中遇到意外阶段时会执行同样的准备，并使用历史续接槽 0x02100024。
     bl fp1_cold_prepare
-    ldr lr, =Arm9UnknownReturnSlot
+    ldr lr, [fp1_slot_arm9_unknown_return]
     ldr lr, [lr]
     bx lr
 
@@ -38,15 +37,15 @@ fp1_warm_boot:
     .if BuildStealth
         // Stealth B route returns to retail ARM9 immediately.
         // Stealth 的 B 路径立即回到零售 ARM9。
-        ldr lr, =Arm9ReturnSlot
+        ldr lr, [fp1_slot_arm9_return]
         ldr lr, [lr]
         b fp1_retail
     .else
         // The normal B route waits until FP2 has completed its service work
         // and published phase E.
         // 常规版 B 路径等待 FP2 完成服务工作并发布 E 阶段。
-        ldr r0, =REG_POWERCNT
-        ldr r1, =Arm9BootState
+        ldr r0, [fp1_slot_powercnt]
+        ldr r1, [fp1_slot_arm9_boot_state]
         strh r1, [r0]
 
 fp1_wait_e_warm:
@@ -54,7 +53,7 @@ fp1_wait_e_warm:
         and r0, r0, #0x0f
         cmp r0, #0x0e
         bne fp1_wait_e_warm
-        ldr lr, =Arm9ReturnSlot
+        ldr lr, [fp1_slot_arm9_return]
         ldr lr, [lr]
         b fp1_retail
     .endif
@@ -79,11 +78,23 @@ fp1_cold_boot:
     // 阶段后继续保留的 ARM9 续接。
     .orga Fp1ContextOffset
 fp1_context:
+fp1_context_r4:
     .dw Arm9ReturnTrampolineAddress
-    .dw 0xe1a00000
-    .dw 0xe599f000
+
+    .headersize Arm9ReturnTrampolineAddress - orga(fp1_context_r4)
+    .orga orga(fp1_context_r4)
+fp1_runtime_trampoline_entry:
+    .orga orga(fp1_context_r4) + 4
+fp1_context_r5:
+    mov r0, r0
+fp1_context_r6:
+    ldr pc, [r9]
+    .headersize FlashMeFp1RamAddress
+fp1_context_ipc_sync:
     .dw REG_IPC_SYNC
+fp1_context_ipc_phase_e:
     .dw 0x00000e00
+fp1_context_arm9_return:
     .dw Arm9ReturnSlot
 
     .orga Fp1ColdPrepareOffset
@@ -91,7 +102,7 @@ fp1_cold_prepare:
     mov r11, lr
     mov r0, #0
     mov r2, #0x2c
-    ldr r1, =REG_DMA0SAD
+    ldr r1, [fp1_slot_dma0_src]
 
 fp1_clear_dma:
     str r0, [r1, r2]
@@ -100,53 +111,50 @@ fp1_clear_dma:
 
     mov r0, #1
     swi 0x1f0000
-    ldr r1, =REG_POWERCNT
+    ldr r1, [fp1_slot_powercnt]
     mov r0, #0
     strh r0, [r1]
 
     // Map all VRAM to LCDC, clear it, then put shared WRAM under ARM7 control.
     // 将全部 VRAM 映射到 LCDC、清零，再把共享 WRAM 交给 ARM7。
-    ldr r4, =VRAM_A_CR
-    ldr r5, =VramLcdcDisableAll
+    ldr r4, [fp1_slot_vram_a_cr]
+    ldr r5, [fp1_slot_vram_lcdc_disable_all]
     str r5, [r4]
     strh r5, [r4, #4]
     strb r5, [r4, #6]
     strh r5, [r4, #8]
-    // Preserve the V8 historical immediate encodings rather than armips'
-    // equivalent canonical rotations.
-    // 保留 V8 的历史立即数编码，而非 armips 语义相同的规范旋转编码。
-    .dw 0xe3a01668
-    .dw 0xe3a02aa4
+    mov r1, #VRAM_A
+    mov r2, #VramLcdcBytes
     bl fp1_zero_range
-    .dw 0xe3a057c0
+    mov r5, #(WRAM_0KARM9_32KARM7 << 24)
     strh r5, [r4]
     strh r5, [r4, #2]
     str r5, [r4, #4]
     strh r5, [r4, #8]
 
-    .dw 0xe3a037a0
+    mov r3, #FirmwarePart1RamaddrBase
     ldrb r0, [r3, #-4]
     cmp r0, #0
     beq fp1_wait_e_cold
-    .dw 0xe2431f80
-    .dw 0xe3a02f5c
+    sub r1, r3, #0x200
+    mov r2, #0x170
     bl fp1_zero_range
-    ldr r0, =Fp1ClearSourceAddress
-    .dw 0xe2431f50
+    ldr r0, [fp1_slot_clear_source]
+    sub r1, r3, #0x140
     mov r2, #0x28
     swi SwiArm7CpuFastSetImmediate
 
 fp1_wait_e_cold:
-    ldr r0, =REG_POWERCNT
-    ldr r1, =Arm9BootState
+    ldr r0, [fp1_slot_powercnt]
+    ldr r1, [fp1_slot_arm9_boot_state]
     strh r1, [r0]
-    .dw 0xe3a01670
-    .dw 0xe3a02e80
+    mov r1, #OAM
+    mov r2, #MM_OBJRAM_SZ
     bl fp1_zero_range
-    .dw 0xe3a01650
-    .dw 0xe3a02e80
+    mov r1, #BG_PALETTE
+    mov r2, #MM_PALRAM_SZ
     bl fp1_zero_range
-    .dw 0xe3a00ee0
+    mov r0, #0xe00
     strh r0, [r10]
     bx r11
 
@@ -161,11 +169,44 @@ fp1_zero_loop:
     bne fp1_zero_loop
     mov pc, lr
 
-    // Keep the literal table at the original V8 offsets.  armips de-duplicates
-    // repeated symbolic loads within this pool.
-    // 将字面量表固定在原始 V8 偏移；armips 会在此 pool 内去重重复的符号加载。
+    // Keep the literal table at the original V8 offsets and order.
+    // 将字面量表固定在原始 V8 偏移和顺序。
     .orga Fp1PoolOffset
-    .pool
+    .if BuildStealth
+fp1_slot_arm9_unknown_return:
+    .dw Arm9UnknownReturnSlot
+fp1_slot_arm9_return:
+    .dw Arm9ReturnSlot
+fp1_slot_dma0_src:
+    .dw REG_DMA0SAD
+fp1_slot_powercnt:
+    .dw REG_POWERCNT
+fp1_slot_vram_a_cr:
+    .dw VRAM_A_CR
+fp1_slot_vram_lcdc_disable_all:
+    .dw VramLcdcDisableAll
+fp1_slot_clear_source:
+    .dw Fp1ClearSourceAddress
+fp1_slot_arm9_boot_state:
+    .dw Arm9BootState
+    .else
+fp1_slot_arm9_unknown_return:
+    .dw Arm9UnknownReturnSlot
+fp1_slot_powercnt:
+    .dw REG_POWERCNT
+fp1_slot_arm9_boot_state:
+    .dw Arm9BootState
+fp1_slot_arm9_return:
+    .dw Arm9ReturnSlot
+fp1_slot_dma0_src:
+    .dw REG_DMA0SAD
+fp1_slot_vram_a_cr:
+    .dw VRAM_A_CR
+fp1_slot_vram_lcdc_disable_all:
+    .dw VramLcdcDisableAll
+fp1_slot_clear_source:
+    .dw Fp1ClearSourceAddress
+    .endif
     .endarea
 
 fp1_retail:
