@@ -32,7 +32,7 @@ patch: unpack
 	$(ARMIPS) -root . -definelabel BuildStealth $(BUILD_STEALTH) src/main.s
 
 pack: patch
-	$(DSFWTOOL) -c $(OUTPUT) -h $(BUILD_DIR)/h.bin -p1 -comp -encrypt --offset 0x180 $(BUILD_DIR)/p1.bin -p2 -comp -encrypt --offset 0x198 $(BUILD_DIR)/p2.bin -p3 -comp --p345-nearest-greedy --offset 0x183A8 $(BUILD_DIR)/p3.bin -p4 -comp --p345-nearest-greedy --offset 0x0F5A8 $(BUILD_DIR)/p4.bin -p5 -comp --p345-nearest-greedy --offset 0x2B8 $(BUILD_DIR)/p5.bin -fh --offset 0x3F680 $(BUILD_DIR)/fh.bin -fp1 -comp --offset $(FP1_OFFSET) $(BUILD_DIR)/fp1.bin -fp2 -comp --offset 0x29FA0 $(BUILD_DIR)/fp2.bin -b $(OFFICIAL_V3) -s 256K --fill FF
+	$(DSFWTOOL) -c $(OUTPUT) -h $(BUILD_DIR)/h.bin -p1 -comp -encrypt --offset 0x180 $(BUILD_DIR)/p1.bin -p2 -comp -encrypt --offset 0x198 $(BUILD_DIR)/p2.bin -p3 -comp -flashme --offset 0x183A8 $(BUILD_DIR)/p3.bin -p4 -comp -flashme --offset 0x0F5A8 $(BUILD_DIR)/p4.bin -p5 -comp -flashme --offset 0x2B8 $(BUILD_DIR)/p5.bin -fh --offset 0x3F680 $(BUILD_DIR)/fh.bin -fp1 -comp --offset $(FP1_OFFSET) $(BUILD_DIR)/fp1.bin -fp2 -comp --offset 0x29FA0 $(BUILD_DIR)/fp2.bin -b $(OFFICIAL_V3) -s 256K --fill FF
 
 normal:
 	$(MAKE) VARIANT=normal pack

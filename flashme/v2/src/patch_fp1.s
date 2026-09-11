@@ -9,7 +9,11 @@
     .headersize FlashMeFp1RamAddress
     .area FlashMePrefixBytes, 0x00
     .arm
-    ldr r10, =REG_IPC_SYNC
+    // `fp1_context + 0x24` already contains REG_IPC_SYNC for r9.  The original
+    // code loads that existing word instead of emitting a duplicate pool entry.
+    // `fp1_context + 0x24` 已为 r9 保存 REG_IPC_SYNC。原始代码读取该现有字，
+    // 而不是额外生成一项重复的字面量池数据。
+    ldr r10, [pc, #0x124] // ldr r10, =REG_IPC_SYNC
 
 fp1_wait_b:
     ldrh r0, [r10]
@@ -33,12 +37,12 @@ fp1_wait_d_warm:
 fp1_cold_boot:
     mov r0, #0
     mov r2, #0x2c
-    ldr r1, =VRAM_A_CR
+    ldr r1, =DMA0_SRC
 
-fp1_clear_video_control:
+fp1_clear_dma_control:
     str r0, [r1, r2]
     subs r2, r2, #4
-    bpl fp1_clear_video_control
+    bpl fp1_clear_dma_control
     mov r0, #1
     swi SwiArm9CustomPostImmediate
     ldr r1, =REG_POWERCNT
@@ -50,11 +54,17 @@ fp1_clear_video_control:
     strh r5, [r4, #4]
     strb r5, [r4, #6]
     strh r5, [r4, #8]
-    mov r1, #VRAM_A
-    mov r2, #VramLcdcBytes
+    // armips emits valid but non-historical encodings for these ARM rotated
+    // immediates.  Retain an exact original word only when an assembly form
+    // cannot select the historical encoding; the comment after it is the
+    // instruction it executes.
+    // 对这些 ARM 旋转立即数，armips 会生成有效但不同于旧版的编码。只有汇编写法
+    // 无法选中历史编码时才保留精确原始字；行末注释给出其实际执行的指令。
+    .dw 0xe3a01668 // mov r1, #VRAM_A (0x06800000)
+    .dw 0xe3a02aa4 // mov r2, #VramLcdcBytes (0x000a4000)
     bl fp1_zero_range
     // Disable VRAM banks A-I, then assign all shared WRAM to ARM7.
-    mov r5, #(WRAM_0KARM9_32KARM7 << 24)
+    .dw 0xe3a057c0 // mov r5, #(WRAM_0KARM9_32KARM7 << 24)
     strh r5, [r4]
     strh r5, [r4, #2]
     str r5, [r4, #4]
@@ -68,11 +78,11 @@ fp1_wait_d_cold:
     ldr r0, =REG_POWERCNT
     ldr r1, =Arm9BootState
     strh r1, [r0]
-    mov r1, #OAM
-    mov r2, #MM_OBJRAM_SZ
+    .dw 0xe3a01670 // mov r1, #OAM (0x07000000)
+    .dw 0xe3a02e80 // mov r2, #MM_OBJRAM_SZ (0x00000800)
     bl fp1_zero_range
-    mov r1, #BG_PALETTE
-    mov r2, #MM_PALRAM_SZ
+    .dw 0xe3a01650 // mov r1, #BG_PALETTE (0x05000000)
+    .dw 0xe3a02e80 // mov r2, #MM_PALRAM_SZ (0x00000800)
     bl fp1_zero_range
     adr r12, fp1_context
     ldmia r12, {r0-r11}

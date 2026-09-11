@@ -136,14 +136,31 @@ p2_legacy_call:
 
 p2_legacy_wait:
     ldr r1, =REG_SPICNT
+p2_legacy_poll:
     ldrh r0, [r1]
     lsr r0, r0, #8
-    bcs p2_legacy_wait
+    // Keep the SPI register address in r1 while polling, matching the
+    // historical two-instruction entry/poll split.
+    // 轮询期间保持 r1 中的 SPI 寄存器地址，与旧代码的“入口/轮询”两指令分离一致。
+    bcs p2_legacy_poll
     ldrb r0, [r1, #2]
     strh r0, [r1, #2]
     bx lr
 
     .orga 0xe0
+// This three-word callback table is the target of `add r3, pc, #0x30` in
+// p2_compute_address.  It precedes the literal pool in the original V3 image;
+// omitting it moves every following Thumb LDR literal and changes the program.
+// 这张三字回调表是 p2_compute_address 中 `add r3, pc, #0x30` 的目标。它在原始
+// V3 镜像中位于字面量池之前；若省略它，后续所有 Thumb LDR 字面量的位置都会移动，
+// 程序字节也随之改变。
+p2_legacy_callback_table:
+    .dw p2_legacy_thunk + 1
+    .dw PrimaryP2LegacyTableRoutine
+    .dw p2_legacy_wait + 1
+
+    // Verified pool start: original V3 places the first pool word at +0xEC.
+    // 已核对的池起点：原始 V3 的第一个池字位于 +0xEC。
     .pool
 p2_primary_end:
     // The primary ARM7 coordinator must remain inside its 2 KiB bootstrap window.

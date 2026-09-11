@@ -35,7 +35,7 @@ address updates.
 
 - `official_v3.bin`, the official V3 firmware, in this directory;
 - `../armips.exe`;
-- `../dsfwtool.exe` with `--p345-nearest-greedy` support.
+- `../dsfwtool.exe` with FlashMe P345 `-comp -flashme` support.
 
 `OFFICIAL_V3`, `ARMIPS`, and `DSFWTOOL` can be overridden on the make command
 line when those files are stored elsewhere.
@@ -130,7 +130,7 @@ flashme_v6_stealth_phat.bin
 
 - 本目录中的官方 V3 固件 `official_v3.bin`；
 - `../armips.exe`；
-- 支持 `--p345-nearest-greedy` 的 `../dsfwtool.exe`。
+- 支持 FlashMe P345 命令形式 `-comp -flashme` 的 `../dsfwtool.exe`。
 
 若这些文件位于其他位置，可在 make 命令行覆写 `OFFICIAL_V3`、`ARMIPS` 和
 `DSFWTOOL`。

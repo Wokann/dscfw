@@ -8,8 +8,8 @@ be used to compare the result, but it is never an input to the reconstruction.
 
 - Place the official V6 firmware beside this file as `official_v6.bin`.
 - `../../armips.exe` must be the armips assembler.
-- `../../dsfwtool.exe` must support FlashMe components and
-  `--p345-nearest-greedy`.
+- `../../dsfwtool.exe` must support FlashMe components and P345
+  `-comp -flashme`.
 
 `temp/` receives plaintext H and P1–P5 extracted from V6. armips creates
 plaintext replacement components in `build/`. dsfwtool then recalculates the
@@ -68,7 +68,7 @@ runs its observed two-step SPI preparation while copying FH in every variant.
 
 - 将官方 V6 固件放在本文件同级目录，命名为 `official_v6.bin`。
 - `../../armips.exe` 必须为 armips 汇编器。
-- `../../dsfwtool.exe` 必须支持 FlashMe 组件以及 `--p345-nearest-greedy`。
+- `../../dsfwtool.exe` 必须支持 FlashMe 组件以及 P345 命令形式 `-comp -flashme`。
 
 `temp/` 保存从 V6 提取出的 H 和 P1–P5 明文。armips 在 `build/` 生成替换组件的明文。
 随后 dsfwtool 会重算头与组件元数据、按需压缩/加密、放置到历史 V8 偏移，并保留 V6 的

@@ -21,7 +21,7 @@ flashme_v5.bin        常规版最终打包镜像
 flashme_v5_stealth.bin Stealth 版最终打包镜像
 ```
 
-`temp/` 和 `build/` 中只存放明文组件。压缩、P1/P2 加密、组件对齐、头部偏移及校验更新全部由最后的 `dsfwtool` 打包命令处理。V5 对 P3--P5 明确选择 `--p345-nearest-greedy`：它采用历史 FlashMe 所需的紧凑、最近距离、无延迟匹配策略，使固定在 `0x3F680` 的 FH 能与全部组件共存于 256 KiB 镜像。该选项不改变官方固件默认使用的逐字节还原 P345 策略。
+`temp/` 和 `build/` 中只存放明文组件。压缩、P1/P2 加密、组件对齐、头部偏移及校验更新全部由最后的 `dsfwtool` 打包命令处理。V5 对 P3--P5 明确使用 `-comp -flashme`：它选择由 CTurt 的 CFW-Suite 复现的历史 FlashMe P345 压缩规则，使固定在 `0x3F680` 的 FH 能与全部组件共存于 256 KiB 镜像。该选项不改变官方固件默认使用的逐字节还原 P345 策略。
 
 ## 前置文件
 
@@ -29,7 +29,7 @@ flashme_v5_stealth.bin Stealth 版最终打包镜像
 
 - `official_v3.bin`：官方 NTR Firmware V3；
 - `../armips.exe`：armips；
-- `../dsfwtool.exe`：支持 `--p345-nearest-greedy` 的 dsfwtool。
+- `../dsfwtool.exe`：支持 FlashMe P345 命令形式 `-comp -flashme` 的 dsfwtool。
 
 默认布局已将两个工具放在 `v5` 的父目录。若官方固件位于其他位置，可在调用时覆写 `OFFICIAL_V3`，例如：
 

@@ -8,7 +8,7 @@ image is an analysis reference, not an input to the build.
 
 - Put official V3 firmware in this directory as official_v3.bin.
 - ../../armips.exe must be the armips assembler.
-- ../../dsfwtool.exe must support FlashMe components and --p345-nearest-greedy.
+- ../../dsfwtool.exe must support FlashMe components and P345 `-comp -flashme`.
 
 temp/ receives plaintext H and P1--P5 extracted from official V3. armips writes
 plaintext replacement components to build/. The Makefile gives those components
@@ -66,7 +66,7 @@ The Makefile fixes the historical V7 Old Phat component placement:
 
 - 将官方 V3 固件放在本目录并命名为 official_v3.bin。
 - ../../armips.exe 应为 armips 汇编器。
-- ../../dsfwtool.exe 应支持 FlashMe 组件及 --p345-nearest-greedy。
+- ../../dsfwtool.exe 应支持 FlashMe 组件及 P345 命令形式 `-comp -flashme`。
 
 temp/ 保存从官方 V3 提取的 H 和 P1--P5 明文。armips 将替换组件的明文写入 build/。
 Makefile 再把这些组件交给 dsfwtool，由它重算头/组件元数据、按需压缩与加密，并从 V3

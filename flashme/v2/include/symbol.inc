@@ -14,6 +14,7 @@
 .definelabel REG_IPC_SYNC,                  0x04000180
 .definelabel REG_SPICNT,                    0x040001c0
 .definelabel REG_SPIDATA,                   0x040001c2
+.definelabel DMA0_SRC,                      0x040000b0
 .definelabel VRAM_A_CR,                     0x04000240
 .definelabel WRAM_CR,                       0x04000247
 .definelabel REG_POWERCNT,                  0x04000304
@@ -93,6 +94,7 @@
 .definelabel PrimaryP2SwiRoutine,           0x00002369
 .definelabel PrimaryP2LegacyCallRoutine,    0x00002389
 .definelabel PrimaryP2LegacyCopyRoutine,    0x000033a5
+.definelabel PrimaryP2LegacyTableRoutine,   0x000022c7
 
 // -----------------------------------------------------------------------------
 // Nintendo DS firmware-image layout and header encoding (format-fixed)
@@ -109,9 +111,16 @@
 .definelabel FirmwarePart1RamaddrBase,      0x02800000
 .definelabel FirmwarePart2RamaddrBase,      0x03810000
 
-// Keep the source header's shift_amounts unless a port intentionally replaces
-// it.  A replacement affects both headers and RAM-address encoding.
-.definelabel ShiftAmountsOverride,          -1
+// Official FlashMe templates encode component descriptors with 0x0C71.
+// ShiftAmountsOriginal (-1) is the explicit opt-in for a custom port that
+// intentionally retains the source header's units.  The selection affects both
+// headers and RAM-address encoding.
+// 官方 FlashMe 模板以 0x0C71 编码组件描述符。ShiftAmountsOriginal（-1）是
+// 自制迁移项目有意沿用源头部单位时的显式选项；此选择会同时影响两份头和 RAM
+// 地址编码。
+.definelabel ShiftAmountsFlashMe,           0x0c71
+.definelabel ShiftAmountsOriginal,          -1
+.definelabel ShiftAmountsOverride,          ShiftAmountsFlashMe
 .definelabel SourceShiftAmounts,            readu16("temp/h.bin", HeaderShiftAmountsOffset)
 .definelabel EffectiveShiftAmounts,         ShiftAmountsOverride < 0 ? SourceShiftAmounts : ShiftAmountsOverride
 .expfunc Part1RamaddrFromRam(address), (FirmwarePart1RamaddrBase - (address)) >> (2 + ((EffectiveShiftAmounts >> 3) & 7))

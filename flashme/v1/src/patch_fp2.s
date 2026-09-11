@@ -12,7 +12,12 @@
     ldr r0, =REG_POWERCNT
     mov r1, #1
     strh r1, [r0]
-    mov r1, #0x00003000
+    // armips emits valid but non-historical encodings for several rotated ARM
+    // immediates.  These words preserve the original V1 encodings; the comment
+    // after each one states the equivalent instruction.
+    // 对若干 ARM 旋转立即数，armips 会生成有效但不同于旧版的编码。以下字保留
+    // 原始 V1 编码；每行末尾说明等价的实际指令。
+    .dw 0xe3a01dc0 // mov r1, #0x00003000
     swi SwiArm7SoundBiasImmediate
     ldr r10, =REG_KEYINPUT
     ldrh r0, [r10]
@@ -57,11 +62,11 @@ fp2_check_boot_state:
 fp2_service_boot:
     // Publish ARM9-visible phase 0xB: FP1 will take its service/warm branch.
     // 发布 ARM9 可见的阶段 0xB：FP1 将选择服务/热启动分支。
-    mov r0, #0x00000b00
+    .dw 0xe3a00eb0 // mov r0, #0x00000b00
     strh r0, [r10, #0x50]
-    mov r5, #0x00001000
-    mov r6, #0x00020000
-    mov r7, #0x00001800
+    .dw 0xe3a05d40 // mov r5, #0x00001000
+    .dw 0xe3a06b80 // mov r6, #0x00020000
+    .dw 0xe3a07d60 // mov r7, #0x00001800
 
 fp2_service_loop:
     mov r0, r5
@@ -73,7 +78,7 @@ fp2_service_loop:
     add r5, r5, r7
     cmp r5, r6
     bmi fp2_service_loop
-    mov r0, #0x00000d00
+    .dw 0xe3a00ed0 // mov r0, #0x00000d00
     strh r0, [r10, #0x50]
     ldr lr, =Arm9ReturnSlotFp2
     ldr lr, [lr]
@@ -101,15 +106,15 @@ fp2_boot_signature:
 fp2_flash_boot:
     // Publish ARM9-visible phase 0xC: FP1 will begin its cold preparation.
     // 发布 ARM9 可见的阶段 0xC：FP1 将开始冷启动准备。
-    mov r0, #0x00000c00
+    .dw 0xe3a00ec0 // mov r0, #0x00000c00
     strh r0, [r10, #0x50]
     ldr r0, =FlashMeFirmwareBytes
     ldr r4, =FlashMeHeaderRamAddress
     mov r1, r4
-    mov r2, #0x00000180
+    .dw 0xe3a02f60 // mov r2, #0x00000180
     bl fp2_copy
     ldrh r1, [r4, #0x70]
-    add r0, r4, #0x00000100
+    .dw 0xe2840f40 // add r0, r4, #0x00000100
     ldrh r2, [r0, #0x70]
     cmp r2, r1
     mov r1, r4
@@ -117,14 +122,14 @@ fp2_flash_boot:
     swihi SwiArm7CpuFastSetImmediate
     mov r0, #0
     mov r2, #0x2c
-    ldr r1, =FlashMeHeaderRamAddress
+    ldr r1, =DMA0_SRC
 
-fp2_clear_header_work:
+fp2_clear_dma_control:
     str r0, [r1, r2]
     subs r2, r2, #4
-    bpl fp2_clear_header_work
+    bpl fp2_clear_dma_control
     bl fp2_boot_return
-    mov r1, #0x00000d00
+    .dw 0xe3a01ed0 // mov r1, #0x00000d00
 
 fp2_wait_d:
     strh r1, [r10, #0x50]
@@ -239,8 +244,14 @@ fp2_retail_end:
 //     volatile u8 *const header = layout->flashHeaderWork;
 //     if (Read16(header + 0x170) > Read16(header + 0x070))
 //         FastCopy(header + 0x100, header, 0x20);
+//
+//     // English: Clear DMA0--DMA3 after the header copy; this is not a header
+//     // clear.  DMA0_SRC is the first register in the 0x30-byte range.
+//     // 中文：在头部复制完成后清除 DMA0--DMA3；这并不是清除头部。DMA0_SRC 是
+//     // 这段 0x30 字节范围的第一个寄存器。
+//     volatile u8 *const dmaControl = (volatile u8 *)&DMA0_SRC;
 //     for (int offset = 0x2c; offset >= 0; offset -= 4)
-//         *(volatile u32 *)(header + offset) = 0;
+//         *(volatile u32 *)(dmaControl + offset) = 0;
 //     Arm7BiosBootReturn();
 //
 //     do REG_IPC_SYNC = 0x0d00; while ((REG_IPC_SYNC & 0x000f) != 0x000d);
@@ -263,8 +274,8 @@ fp2_retail_end:
 // that continuation.  FP1 observes B and later D, so ARM9 cannot enter the
 // retained P1 service path before ARM7 has finished this sequence.  The cold
 // route instead publishes C, copies the two user-settings slots at the image
-// tail, selects the newer slot by its version field, clears the header work
-// prefix, invokes the inherited BIOS return path, then repeatedly publishes D
+// tail, selects the newer slot by its version field, clears the DMA control
+// range, invokes the inherited BIOS return path, then repeatedly publishes D
 // until the rendezvous is visible before transferring to the ARM7 return entry.
 //
 // This makes FP2 the single source of second-stage policy and IPC ordering,
@@ -283,7 +294,7 @@ fp2_retail_end:
 // 服务路径会在继承的时序与 IPC 序列之前发布 B，随后发布 D，并携带该续接所期望的
 // ARM9 返回链接进入保留 P2。FP1 会观察 B 和之后的 D，因此 ARM9 不会在 ARM7 完成该
 // 序列前进入保留 P1 的服务路径。冷启动路径则发布 C，从镜像尾部复制两个用户设置槽，
-// 通过版本字段选择较新的槽，清除头工作区前缀，调用继承的 BIOS 返回路径，再反复发布 D，
+// 通过版本字段选择较新的槽，清除 DMA 控制范围，调用继承的 BIOS 返回路径，再反复发布 D，
 // 直到会合状态可见，最后跳转至 ARM7 返回入口。
 //
 // 这样 FP2 成为第二阶段策略与 IPC 顺序的唯一来源，而 FP1 负责 ARM9 侧响应。FP2 在

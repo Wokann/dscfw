@@ -9,7 +9,11 @@
     .headersize FlashMeFp1RamAddress
     .area FlashMePrefixBytes, 0x00
     .arm
-    ldr r10, =REG_IPC_SYNC
+    // `fp1_context + 0x24` already contains REG_IPC_SYNC for r9.  The original
+    // code loads that existing word instead of emitting a duplicate pool entry.
+    // `fp1_context + 0x24` 已为 r9 保存 REG_IPC_SYNC。原始代码读取该现有字，
+    // 而不是额外生成一项重复的字面量池数据。
+    ldr r10, [pc, #0x124] // ldr r10, =REG_IPC_SYNC
 
 fp1_wait_b:
     ldrh r0, [r10]
@@ -33,12 +37,12 @@ fp1_wait_d_warm:
 fp1_cold_boot:
     mov r0, #0
     mov r2, #0x2c
-    ldr r1, =VRAM_A_CR
+    ldr r1, =DMA0_SRC
 
-fp1_clear_video_control:
+fp1_clear_dma_control:
     str r0, [r1, r2]
     subs r2, r2, #4
-    bpl fp1_clear_video_control
+    bpl fp1_clear_dma_control
     mov r0, #1
     swi SwiArm9CustomPostImmediate
     ldr r1, =REG_POWERCNT
@@ -50,11 +54,17 @@ fp1_clear_video_control:
     strh r5, [r4, #4]
     strb r5, [r4, #6]
     strh r5, [r4, #8]
-    mov r1, #VRAM_A
-    mov r2, #VramLcdcBytes
+    // armips emits valid but non-historical encodings for these ARM rotated
+    // immediates.  Retain an exact original word only when an assembly form
+    // cannot select the historical encoding; the comment after it is the
+    // instruction it executes.
+    // 对这些 ARM 旋转立即数，armips 会生成有效但不同于旧版的编码。只有汇编写法
+    // 无法选中历史编码时才保留精确原始字；行末注释给出其实际执行的指令。
+    .dw 0xe3a01668 // mov r1, #VRAM_A (0x06800000)
+    .dw 0xe3a02aa4 // mov r2, #VramLcdcBytes (0x000a4000)
     bl fp1_zero_range
     // Disable VRAM banks A-I, then assign all shared WRAM to ARM7.
-    mov r5, #(WRAM_0KARM9_32KARM7 << 24)
+    .dw 0xe3a057c0 // mov r5, #(WRAM_0KARM9_32KARM7 << 24)
     strh r5, [r4]
     strh r5, [r4, #2]
     str r5, [r4, #4]
@@ -68,11 +78,11 @@ fp1_wait_d_cold:
     ldr r0, =REG_POWERCNT
     ldr r1, =Arm9BootState
     strh r1, [r0]
-    mov r1, #OAM
-    mov r2, #MM_OBJRAM_SZ
+    .dw 0xe3a01670 // mov r1, #OAM (0x07000000)
+    .dw 0xe3a02e80 // mov r2, #MM_OBJRAM_SZ (0x00000800)
     bl fp1_zero_range
-    mov r1, #BG_PALETTE
-    mov r2, #MM_PALRAM_SZ
+    .dw 0xe3a01650 // mov r1, #BG_PALETTE (0x05000000)
+    .dw 0xe3a02e80 // mov r2, #MM_PALRAM_SZ (0x00000800)
     bl fp1_zero_range
     adr r12, fp1_context
     ldmia r12, {r0-r11}
@@ -192,18 +202,28 @@ fp1_retail:
 //                       *(volatile u32 *)layout->arm9ReturnSlot);
 //     }
 //
-//     // English: C selects the cold route and prepares VRAM/WRAM for ARM7.
-//     // 中文：C 选择冷启动路径，并为 ARM7 准备 VRAM/WRAM。
-//     volatile u8 *const vramControl = &VRAM_A_CR;
+//     // English: C selects the cold route and first disables DMA0--DMA3.
+//     // 中文：C 选择冷启动路径，先关闭 DMA0--DMA3。
+//     volatile u8 *const dmaControl = (volatile u8 *)&DMA0_SRC;
 //     for (int offset = 0x2c; offset >= 0; offset -= 4)
-//         *(volatile u32 *)(vramControl + offset) = 0;
+//         *(volatile u32 *)(dmaControl + offset) = 0;
 //     Arm9CustomPostSwi(1);
 //     REG_POWERCNT = 0;
-//     for (unsigned bank = 0; bank < 9; ++bank)
-//         vramControl[bank] = VRAM_ENABLE | VRAM_A_LCD;
+//
+//     // English: The byte/halfword stores deliberately skip WRAM_CR at +0x247.
+//     // 中文：这些字节/半字存储会刻意跳过 +0x247 的 WRAM_CR。
+//     VRAM_A_CR = VRAM_ENABLE | VRAM_A_LCD;
+//     VRAM_B_CR = VRAM_ENABLE | VRAM_B_LCD;
+//     VRAM_C_CR = VRAM_ENABLE | VRAM_C_LCD;
+//     VRAM_D_CR = VRAM_ENABLE | VRAM_D_LCD;
+//     VRAM_E_CR = VRAM_ENABLE | VRAM_E_LCD;
+//     VRAM_F_CR = VRAM_ENABLE | VRAM_F_LCD;
+//     VRAM_G_CR = VRAM_ENABLE | VRAM_G_LCD;
+//     VRAM_H_CR = VRAM_ENABLE | VRAM_H_LCD;
+//     VRAM_I_CR = VRAM_ENABLE | VRAM_I_LCD;
 //     ZeroRange((volatile u16 *)VRAM_A, 0x0a4000);
-//     for (unsigned bank = 0; bank < 9; ++bank)
-//         vramControl[bank] = 0;
+//     VRAM_A_CR = VRAM_B_CR = VRAM_C_CR = VRAM_D_CR = 0;
+//     VRAM_E_CR = VRAM_F_CR = VRAM_G_CR = VRAM_H_CR = VRAM_I_CR = 0;
 //     WRAM_CR = 3;
 //
 //     do phase = IpcPhase(); while (phase != 0x000d);
@@ -229,7 +249,7 @@ fp1_retail:
 //
 // On B, FP1 restores the expected power value, waits until FP2 reaches D, loads
 // the ARM9 return link prepared by the ARM7 path, and branches directly into the
-// retained retail P1 body.  On C, it clears the VRAM control range, performs the
+// retained retail P1 body.  On C, it clears the DMA control range, performs the
 // inherited ARM9 SWI, temporarily maps VRAM through LCDC to clear it, disables
 // the banks again, and assigns shared WRAM to ARM7.  It then waits for D before
 // restoring power, clearing OAM/palette memory, and installing the four-word
@@ -250,7 +270,7 @@ fp1_retail:
 // 阶段，从而将 ARM7 策略与 ARM9 显示准备工作分开。
 //
 // 在 B 路径上，FP1 恢复预期电源值，等待 FP2 到达 D，读取 ARM7 路径准备好的 ARM9
-// 返回链接，并直接跳入保留的零售 P1 主体。在 C 路径上，它清除 VRAM 控制范围，执行
+// 返回链接，并直接跳入保留的零售 P1 主体。在 C 路径上，它清除 DMA 控制范围，执行
 // 继承的 ARM9 SWI，临时以 LCDC 映射 VRAM 以清零，再次关闭各 bank，并将共享 WRAM
 // 分配给 ARM7。随后它等待 D，恢复电源、清除 OAM/调色板内存，并通过精确的 r0-r11
 // 上下文交接安装四字 ARM9 返回跳板。

@@ -10,6 +10,9 @@
     ldr r0, =PrimaryP1RamAddress + 4
     bx r0
     .pool
+    // The historical component ends with one zero word after its LDR literal.
+    // 旧版组件在 LDR 字面量之后以一个零字结束。
+    .dw 0x00000000
 p1_primary_end:
     // Keep the primary gate inside the dynamically selected 64 KiB staging page.
     // 确保一级闸门始终位于动态选定的 64 KiB 暂存页之内。

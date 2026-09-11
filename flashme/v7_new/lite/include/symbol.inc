@@ -124,7 +124,9 @@
 // source-H value used to decode retained retail entry addresses.
 // V7 New Lite 会保留官方 V6 的代码主体，并使用 0x0C71 的输出描述符单位。它控制 H/FH
 // 的 8 字节组件对齐与 RAM 地址字段，并有意与用于解码保留零售入口的源 H 数值区分。
-.definelabel ShiftAmountsOverride,          0x0c71
+.definelabel ShiftAmountsFlashMe,           0x0c71
+.definelabel ShiftAmountsOriginal,          -1
+.definelabel ShiftAmountsOverride,          ShiftAmountsFlashMe
 .definelabel SourceShiftAmounts,            readu16("temp/h.bin", HeaderShiftAmountsOffset)
 .definelabel EffectiveShiftAmounts,         ShiftAmountsOverride < 0 ? SourceShiftAmounts : ShiftAmountsOverride
 .expfunc Part1RamaddrFromRam(address), (FirmwarePart1RamaddrBase - (address)) >> (2 + ((EffectiveShiftAmounts >> 3) & 7))

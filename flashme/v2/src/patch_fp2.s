@@ -12,7 +12,12 @@
     ldr r0, =REG_POWERCNT
     mov r1, #1
     strh r1, [r0]
-    mov r1, #0x00003000
+    // armips emits valid but non-historical encodings for several rotated ARM
+    // immediates.  These words preserve the original V2 encodings; the comment
+    // after each one states the equivalent instruction.
+    // 对若干 ARM 旋转立即数，armips 会生成有效但不同于旧版的编码。以下字保留
+    // 原始 V2 编码；每行末尾说明等价的实际指令。
+    .dw 0xe3a01dc0 // mov r1, #0x00003000
     swi SwiArm7SoundBiasImmediate
     ldr r10, =REG_KEYINPUT
     ldrh r0, [r10]
@@ -35,13 +40,14 @@
 fp2_check_boot_state:
     // This is deliberately not a 16-byte string comparison.  It selects the
     // flash route when Slot-2 title[12..15] is "PASS", or when title[0..7]
-    // is "DSBooter".  The stored trailing "FLSH" word is loaded but is not
-    // directly tested by this predicate.
+    // is "DSBooter".  V2 stores only these twelve signature bytes; the fifth
+    // word loaded by the fixed register block is the following instruction and
+    // is intentionally not tested.
     // 这里刻意不是 16 字节字符串比较。当 Slot-2 标题的 [12..15] 为 "PASS"，
-    // 或 [0..7] 为 "DSBooter" 时，会选择 flash 路径。表中结尾的 "FLSH"
-    // 字虽会被载入，但本判定不会直接比较它。
+    // 或 [0..7] 为 "DSBooter" 时，会选择 flash 路径。V2 只保存这十二个签名字节；
+    // 固定寄存器块读取的第五个字是后续指令，且本判定有意不会使用它。
     adr r0, fp2_boot_state
-    ldmia r0, {r1-r5}
+    ldmia r0, {r1-r4}
     ldmia r1, {r6-r9}
     // title[12..15] == "PASS".
     // title[12..15] == "PASS"。
@@ -57,11 +63,11 @@ fp2_check_boot_state:
 fp2_service_boot:
     // Publish ARM9-visible phase 0xB: FP1 will take its service/warm branch.
     // 发布 ARM9 可见的阶段 0xB：FP1 将选择服务/热启动分支。
-    mov r0, #0x00000b00
+    .dw 0xe3a00eb0 // mov r0, #0x00000b00
     strh r0, [r10, #0x50]
-    mov r5, #0x00001000
-    mov r6, #0x00020000
-    mov r7, #0x00001800
+    .dw 0xe3a05d40 // mov r5, #0x00001000
+    .dw 0xe3a06b80 // mov r6, #0x00020000
+    .dw 0xe3a07d60 // mov r7, #0x00001800
 
 fp2_service_loop:
     mov r0, r5
@@ -73,7 +79,7 @@ fp2_service_loop:
     add r5, r5, r7
     cmp r5, r6
     bmi fp2_service_loop
-    mov r0, #0x00000d00
+    .dw 0xe3a00ed0 // mov r0, #0x00000d00
     strh r0, [r10, #0x50]
     ldr lr, =Arm9ReturnSlotFp2
     ldr lr, [lr]
@@ -96,20 +102,20 @@ fp2_ipc_call:
 fp2_boot_state:
     .dw GbaRomTitleAddress
 fp2_boot_signature:
-    .ascii "DSBooterPASSFLSH"
+    .ascii "DSBooterPASS"
 
 fp2_flash_boot:
     // Publish ARM9-visible phase 0xC: FP1 will begin its cold preparation.
     // 发布 ARM9 可见的阶段 0xC：FP1 将开始冷启动准备。
-    mov r0, #0x00000c00
+    .dw 0xe3a00ec0 // mov r0, #0x00000c00
     strh r0, [r10, #0x50]
     ldr r0, =FlashMeFirmwareBytes
     ldr r4, =FlashMeHeaderRamAddress
     mov r1, r4
-    mov r2, #0x00000180
+    .dw 0xe3a02f60 // mov r2, #0x00000180
     bl fp2_copy
     ldrh r1, [r4, #0x70]
-    add r0, r4, #0x00000100
+    .dw 0xe2840f40 // add r0, r4, #0x00000100
     ldrh r2, [r0, #0x70]
     cmp r2, r1
     mov r1, r4
@@ -117,14 +123,14 @@ fp2_flash_boot:
     swihi SwiArm7CpuFastSetImmediate
     mov r0, #0
     mov r2, #0x2c
-    ldr r1, =FlashMeHeaderRamAddress
+    ldr r1, =DMA0_SRC
 
-fp2_clear_header_work:
+fp2_clear_dma_control:
     str r0, [r1, r2]
     subs r2, r2, #4
-    bpl fp2_clear_header_work
+    bpl fp2_clear_dma_control
     bl fp2_boot_return
-    mov r1, #0x00000d00
+    .dw 0xe3a01ed0 // mov r1, #0x00000d00
 
 fp2_wait_d:
     strh r1, [r10, #0x50]
@@ -132,8 +138,8 @@ fp2_wait_d:
     and r0, r0, #0x0f
     cmp r0, #0x0d
     bne fp2_wait_d
-    ldr lr, =Arm7ReturnEntry
-    bx lr
+    ldr r12, =Arm7ReturnEntry
+    bx r12
 
 fp2_copy:
     ldr r3, =BiosCopyRoutine
