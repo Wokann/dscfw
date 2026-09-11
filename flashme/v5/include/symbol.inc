@@ -236,6 +236,3 @@
 .definelabel Fp1ContextR3,                  0x00000000
 .definelabel Fp1ContextR8,                  0xffff0940
 .definelabel Fp1ContextR10,                 0x00000d00
-.definelabel Fp1TrampolineStoreHalfword,    0xe1c9a0b0
-.definelabel Fp1TrampolineLoadTarget,       0xe51f0010
-.definelabel Fp1TrampolineBranchTarget,     0xe12fff10

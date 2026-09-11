@@ -9,12 +9,11 @@
     .headersize FlashMeFp1RamAddress
     .area FlashMePrefixBytes, 0x00
     .arm
-    // The context's r9 word doubles as the first literal-pool entry.  Loading
-    // it directly keeps the historical V5 prefix layout while still naming the
-    // platform register symbolically.
-    // 上下文的 r9 字同时复用为第一个字面量池项。直接读取它既保持历史 V5 的前置布局，
-    // 又仍以符号名称表达平台寄存器。
-    ldr r10, [pc, #Fp1ContextOffset + 0x1c]
+    // The context's r9 word doubles as the first literal slot.  Referencing it
+    // by name retains the historical V5 layout while ARMIPS derives the offset.
+    // 上下文的 r9 字同时复用为第一个字面量槽。以名称引用既保留历史 V5 布局，又由
+    // ARMIPS 推导偏移。
+    ldr r10, [fp1_context_ipc_sync]
 
 fp1_wait_b:
     ldrh r0, [r10]
@@ -28,12 +27,12 @@ fp1_wait_b:
     // not publish the normal warm-path power write or wait for the D barrier.
     // 中文：Stealth 会把 B 路径直接转入保留 P1，不执行常规热路径的电源写入，
     // 也不等待 D 屏障。
-    ldr lr, =Arm9ReturnSlot
+    ldr lr, [fp1_slot_arm9_return]
     ldr lr, [lr]
     b fp1_retail
     .else
-    ldr r0, =REG_POWERCNT
-    ldr r1, =Arm9BootState
+    ldr r0, [fp1_slot_powercnt]
+    ldr r1, [fp1_slot_arm9_boot_state]
     strh r1, [r0]
 
 fp1_wait_d_warm:
@@ -41,7 +40,7 @@ fp1_wait_d_warm:
     and r0, r0, #0x0f
     cmp r0, #0x0d
     bne fp1_wait_d_warm
-    ldr lr, =Arm9ReturnSlot
+    ldr lr, [fp1_slot_arm9_return]
     ldr lr, [lr]
     b fp1_retail
     .endif
@@ -49,41 +48,31 @@ fp1_wait_d_warm:
 fp1_cold_boot:
     mov r0, #0
     mov r2, #0x2c
-    ldr r1, =REG_DMA0SAD
+    ldr r1, [fp1_slot_dma0_src]
 
 fp1_clear_dma_range:
     str r0, [r1, r2]
     subs r2, r2, #4
     bpl fp1_clear_dma_range
-    ldr r1, =REG_POWERCNT
+    ldr r1, [fp1_slot_powercnt]
     mov r0, #0
     strh r0, [r1]
-    // Keep the historical literal offsets: V5 places the two VRAM values after
-    // the ordinary pool, whereas the early register-range pointer is in it.
-    // 保持历史字面量偏移：V5 将两个 VRAM 值放在普通 pool 之后，而早期寄存器范围
-    // 指针位于普通 pool 中。
-    .if BuildStealth
-    ldr r4, [pc, #0xd0]
-    ldr r5, [pc, #0xd0]
-    .else
-    ldr r4, [pc, #0xd4]
-    ldr r5, [pc, #0xd4]
-    .endif
+    // V5 keeps the two VRAM values after its ordinary slots.  These labels
+    // preserve that order while removing the handwritten PC displacements.
+    // V5 会把两个 VRAM 值放在普通槽之后。以下标签保留该顺序，同时移除手写 PC 位移。
+    ldr r4, [fp1_slot_vram_a_cr]
+    ldr r5, [fp1_slot_vram_lcdc_enable_abcd]
     str r5, [r4]
     strh r5, [r4, #4]
     strb r5, [r4, #6]
     strh r5, [r4, #8]
-    // mov r1, #VRAM_A / mov r2, #VramLcdcBytes.  The explicit words retain
-    // the source's non-canonical ARM immediate rotations.
-    // mov r1, #VRAM_A / mov r2, #VramLcdcBytes。显式字保留源代码的非规范 ARM
-    // 立即数旋转编码。
-    .dw 0xe3a01668
-    .dw 0xe3a02aa4
+    // The FlashMe ARMIPS profile selects the historical immediate rotations.
+    // FlashMe ARMIPS 配置会选择历史立即数旋转编码。
+    mov r1, #VRAM_A
+    mov r2, #VramLcdcBytes
     bl fp1_zero_range
     // Disable VRAM banks A-I, then assign all shared WRAM to ARM7.
-    // mov r5, #(WRAM_0KARM9_32KARM7 << 24), historical immediate encoding.
-    // mov r5, #(WRAM_0KARM9_32KARM7 << 24)，使用历史立即数编码。
-    .dw 0xe3a057c0
+    mov r5, #(WRAM_0KARM9_32KARM7 << 24)
     strh r5, [r4]
     strh r5, [r4, #2]
     str r5, [r4, #4]
@@ -94,26 +83,14 @@ fp1_wait_d_cold:
     and r0, r0, #0x0f
     cmp r0, #0x0d
     bne fp1_wait_d_cold
-    ldr r0, =REG_POWERCNT
-    .if BuildStealth
-    // The Stealth literal order keeps VRAM entries before the deferred power
-    // value.  This direct load reads the final explicit literal at +0x128.
-    // Stealth 的字面量顺序会让 VRAM 项位于延后的电源值之前。此直接读取会访问最后
-    // 位于 +0x128 的显式字面量。
-    ldr r1, [pc, #0x8c]
-    .else
-    ldr r1, =Arm9BootState
-    .endif
+    ldr r0, [fp1_slot_powercnt]
+    ldr r1, [fp1_slot_arm9_boot_state]
     strh r1, [r0]
-    // mov r1, #OAM / mov r2, #MM_OBJRAM_SZ, historical immediate encodings.
-    // mov r1, #OAM / mov r2, #MM_OBJRAM_SZ，使用历史立即数编码。
-    .dw 0xe3a01670
-    .dw 0xe3a02e80
+    mov r1, #OAM
+    mov r2, #MM_OBJRAM_SZ
     bl fp1_zero_range
-    // mov r1, #BG_PALETTE / mov r2, #MM_PALRAM_SZ, historical encodings.
-    // mov r1, #BG_PALETTE / mov r2, #MM_PALRAM_SZ，使用历史编码。
-    .dw 0xe3a01650
-    .dw 0xe3a02e80
+    mov r1, #BG_PALETTE
+    mov r2, #MM_PALRAM_SZ
     bl fp1_zero_range
     adr r12, fp1_context
     ldmia r12, {r0-r11}
@@ -135,13 +112,67 @@ fp1_zero_loop:
     .orga Fp1ContextOffset
 fp1_context:
     // Restored into r0-r11; r4-r7 become the installed ARM trampoline.
-    .dw Fp1ContextR0, Fp1ContextR1, Fp1ContextR2, Fp1ContextR3
+fp1_context_r0:
+    .dw Fp1ContextR0
+fp1_context_r1:
+    .dw Fp1ContextR1
+fp1_context_r2:
+    .dw Fp1ContextR2
+fp1_context_r3:
+    .dw Fp1ContextR3
+fp1_context_r4:
     .dw Arm9ReturnSlotNext
-    .dw Fp1TrampolineStoreHalfword, Fp1TrampolineLoadTarget, Fp1TrampolineBranchTarget
-    .dw Fp1ContextR8, REG_IPC_SYNC, Fp1ContextR10, Arm9ReturnSlot
-    .pool
-    .dw VRAM_A_CR, VramLcdcEnableAbcd
+
+// These three words are copied by the r0-r11 hand-off to Arm9ReturnSlotNext.
+// Rebase only this output range to its runtime location so the LDR target is a
+// named slot rather than a handwritten PC displacement.
+// 这三个字会由 r0-r11 交接复制到 Arm9ReturnSlotNext。仅重映射该输出范围，使 LDR
+// 目标成为命名槽而非手写 PC 位移。
+    .headersize Arm9ReturnSlot - orga(fp1_context_r4)
+    .orga orga(fp1_context_r4)
+fp1_runtime_loop_slot:
+    .orga orga(fp1_context_r4) + 4
+fp1_context_r5:
+    strh r10, [r9]
+fp1_context_r6:
+    ldr r0, [fp1_runtime_loop_slot]
+fp1_context_r7:
+    bx r0
+    .headersize FlashMeFp1RamAddress
+fp1_context_r8:
+    .dw Fp1ContextR8
+fp1_context_ipc_sync:
+    .dw REG_IPC_SYNC
+fp1_context_r10:
+    .dw Fp1ContextR10
+fp1_context_r11:
+    .dw Arm9ReturnSlot
+
+// Preserve the variant-specific historical slot order.
+// 保留不同变体各自的历史槽顺序。
     .if BuildStealth
+fp1_slot_arm9_return:
+    .dw Arm9ReturnSlot
+fp1_slot_dma0_src:
+    .dw REG_DMA0SAD
+fp1_slot_powercnt:
+    .dw REG_POWERCNT
+    .else
+fp1_slot_powercnt:
+    .dw REG_POWERCNT
+fp1_slot_arm9_boot_state:
+    .dw Arm9BootState
+fp1_slot_arm9_return:
+    .dw Arm9ReturnSlot
+fp1_slot_dma0_src:
+    .dw REG_DMA0SAD
+    .endif
+fp1_slot_vram_a_cr:
+    .dw VRAM_A_CR
+fp1_slot_vram_lcdc_enable_abcd:
+    .dw VramLcdcEnableAbcd
+    .if BuildStealth
+fp1_slot_arm9_boot_state:
     .dw Arm9BootState
     .endif
     .endarea
