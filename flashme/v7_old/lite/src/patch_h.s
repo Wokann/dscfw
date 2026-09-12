@@ -5,6 +5,14 @@
 // 小型 P1/P2 对。H 是该程序对的元数据，本身并不是可执行代码。请参阅 main.s。
 .create "build/h.bin", 0
     .incbin "temp/h.bin"
+
+    // English: Reconstruct the released FlashMe template rather than an
+    // installation for one console.  Blank the copied Wi-Fi calibration and
+    // configuration region at +0x28..+0x17B.
+    // 中文：重建公开发布的 FlashMe 模板，而非某一台主机的安装结果。将复制来的
+    // Wi-Fi 校准与配置区域 +0x28..+0x17B 填充为 FF。
+    .orga 0x0028
+    .fill 0x0154, 0xff
     .if ShiftAmountsOverride >= 0
         // English: Replace the retail shift_amounts only for an intentional
         // format port.  This field controls how both ROM and RAM descriptor
@@ -37,11 +45,10 @@
     .orga HeaderTypeOffset
     .dh PrimaryTypeId
 
-    // English: Preserve the retail P1/P2 CRC16 as FlashMe's source-firmware
-    // marker.  The real H P1/P2 CRC is replaced later after new components are
-    // packed, so this copied value remains the stable identity reference.
-    // 中文：把零售 P1/P2 CRC16 保留为 FlashMe 的原始固件标记。实际 H 的 P1/P2
-    // CRC 会在新组件打包后重算，因此这个复制值可作为稳定的来源识别依据。
+    // English: The public release template fixes the source/private marker at
+    // +0x17E to FFFF.  Do not import a retail P1/P2 CRC16 into this field.
+    // 中文：公开发布模板会将 +0x17E 的来源/私有标记固定为 FFFF；不得把零售
+    // P1/P2 CRC16 导入该字段。
     .orga HeaderOriginalVersionOffset
-    .incbin "temp/h.bin", HeaderPart12Crc16Offset, 2
+    .dh 0xffff
 .close

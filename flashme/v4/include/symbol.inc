@@ -191,8 +191,10 @@
     .error "FlashMe: FP1 prefix overlaps the dynamic primary P1 staging page"
 .endif
 
-// FlashMe-owned header-tail fields.  +0x17c selects the FlashMe type; +0x17e
-// preserves the original P1/P2 CRC16 marker rather than an official field.
+// English: FlashMe-owned header-tail fields.  +0x17C selects the
+// published FlashMe type; public-image reconstruction fixes +0x17E to FFFF.
+// 中文：FlashMe 自有的头尾字段中，+0x17C 选择公开模板的 FlashMe 类型；
+// 公开镜像重构将 +0x17E 固定为 FFFF。
 .definelabel HeaderTypeOffset,              0x17c
 .definelabel HeaderOriginalVersionOffset,   0x17e
 .definelabel PrimaryTypeId,                 0x0001

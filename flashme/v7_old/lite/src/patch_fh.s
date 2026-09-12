@@ -5,6 +5,14 @@
 // 第二个 FP1/FP2 程序对。它同样基于零售 H，但其中的 P1/P2 字段会特意指向 FP 组件。
 .create "build/fh.bin", 0
     .incbin "temp/h.bin"
+
+    // English: Reconstruct the released FlashMe template rather than an
+    // installation for one console.  Blank the copied Wi-Fi calibration and
+    // configuration region at +0x28..+0x17B.
+    // 中文：重建公开发布的 FlashMe 模板，而非某一台主机的安装结果。将复制来的
+    // Wi-Fi 校准与配置区域 +0x28..+0x17B 填充为 FF。
+    .orga 0x0028
+    .fill 0x0154, 0xff
     .if ShiftAmountsOverride >= 0
         // English: Keep FH's unit encoding synchronized with H when a format
         // port explicitly overrides shift_amounts; otherwise retain retail H.
@@ -36,10 +44,10 @@
     .orga HeaderTypeOffset
     .dh FlashMeTypeId
 
-    // English: Copy the same original retail P1/P2 CRC16 marker used by H so
-    // both headers identify the firmware family from which this patch derives.
-    // 中文：复制与 H 相同的原始零售 P1/P2 CRC16 标记，使两个头均能识别本补丁所基于
-    // 的固件系列。
+    // English: The public release template fixes the source/private marker at
+    // +0x17E to FFFF.  Do not import a retail P1/P2 CRC16 into this field.
+    // 中文：公开发布模板会将 +0x17E 的来源/私有标记固定为 FFFF；不得把零售
+    // P1/P2 CRC16 导入该字段。
     .orga HeaderOriginalVersionOffset
-    .incbin "temp/h.bin", HeaderPart12Crc16Offset, 2
+    .dh 0xffff
 .close

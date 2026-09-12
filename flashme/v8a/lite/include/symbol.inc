@@ -133,6 +133,10 @@
 .definelabel LiteSpiInitialControl,         0x00008802
 .definelabel LiteSpiFollowupControl,        0x00008002
 
+// English: FlashMe-owned header-tail fields.  +0x17C selects the
+// published FlashMe type; public-image reconstruction fixes +0x17E to FFFF.
+// 中文：FlashMe 自有的头尾字段中，+0x17C 选择公开模板的 FlashMe 类型；
+// 公开镜像重构将 +0x17E 固定为 FFFF。
 .definelabel HeaderTypeOffset,              0x017c
 .definelabel HeaderOriginalVersionOffset,   0x017e
 .definelabel PrimaryTypeId,                 0x0002

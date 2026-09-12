@@ -112,9 +112,8 @@
 // P4 and P5 are retained unchanged.  H and FH are both based on the original
 // H, but H describes primary P1/P2 whereas FH describes FP1/FP2.  dsfwtool
 // supplies their calculated component locations and CRCs during packing.
-// FlashMe-owned H/FH +0x17C stores the type marker, while +0x17E preserves the
-// source header's tail value (FFFF in the known V1/V3 Phat templates), rather
-// than copying or recalculating H's P1/P2 CRC16.
+// FlashMe-owned H/FH +0x17C stores the type marker.  Public-image
+// reconstruction blanks copied Wi-Fi fields and fixes +0x17E to FFFF.
 //
 // The chronological outline stays in plain text; each component file appends one
 // comment-only C flow model after its assembly implementation.
@@ -177,8 +176,8 @@
 // P3 不属于这次即时的双 CPU 交接。对它的修改会绕过原本会拒绝改写后固件内容的零售
 // 验证路径；P4 与 P5 保持原样。H 与 FH 都以原始 H 为基础：H 描述一级 P1/P2，FH
 // 描述 FP1/FP2；打包时由 dsfwtool 填入重新计算的组件位置与 CRC。FlashMe 自有的
-// H/FH +0x17C 保存类型标记，+0x17E 则保留源头部尾值（已知 V1/V3 Phat 模板中为
-// FFFF），而不是复制或重算 H 的 P1/P2 CRC16。
+// H/FH +0x17C 保存类型标记。公开镜像重构会清空复制来的 Wi-Fi 字段，并将
+// +0x17E 固定为 FFFF。
 //
 // 以下时间纲要保持普通文字；每个组件文件都会在其汇编实现后附上一份仅作注释的 C 流程模型。
 //

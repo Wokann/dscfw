@@ -5,6 +5,14 @@
 // 第二个 FP1/FP2 程序对。它同样基于零售 H，但其中的 P1/P2 字段会特意指向 FP 组件。
 .create "build/fh.bin", 0
     .incbin "temp/h.bin"
+
+    // English: Reconstruct the released FlashMe template rather than an
+    // installation for one console.  Blank the copied Wi-Fi calibration and
+    // configuration region at +0x28..+0x17B.
+    // 中文：重建公开发布的 FlashMe 模板，而非某一台主机的安装结果。将复制来的
+    // Wi-Fi 校准与配置区域 +0x28..+0x17B 填充为 FF。
+    .orga 0x0028
+    .fill 0x0154, 0xff
     .if ShiftAmountsOverride >= 0
         // English: Keep FH's unit encoding synchronized with H when a format
         // port explicitly overrides shift_amounts; otherwise retain retail H.
@@ -36,16 +44,10 @@
     .orga HeaderTypeOffset
     .dh FlashMeTypeId
 
-    // English: Match H's V1/V3-compatible Wi-Fi configuration checksum
-    // placeholder even before dsfwtool performs its H-to-FH synchronization.
-    // 中文：即使在 dsfwtool 执行 H 到 FH 的同步前，也要让 FH 与 H 一样使用兼容
-    // V1/V3 的 Wi-Fi 配置校验占位值。
-    .orga HeaderWifiConfigCrc16Offset
+    // English: The public release template fixes the source/private marker at
+    // +0x17E to FFFF.  Do not import a retail P1/P2 CRC16 into this field.
+    // 中文：公开发布模板会将 +0x17E 的来源/私有标记固定为 FFFF；不得把零售
+    // P1/P2 CRC16 导入该字段。
+    .orga HeaderOriginalVersionOffset
     .dh 0xffff
-
-    // English: +0x17E is left unchanged after the source-header copy.  During
-    // packaging dsfwtool synchronizes FH from the completed H, so FH inherits
-    // H's preserved source value (FFFF in known V1/V3 Phat templates).
-    // 中文：复制源头后，+0x17E 保持不变。打包时 dsfwtool 会由完成后的 H 同步 FH，
-    // 因此 FH 会继承 H 保留的源值（已知 V1/V3 Phat 模板中为 FFFF）。
 .close

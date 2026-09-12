@@ -5,6 +5,14 @@
 // 小型 P1/P2 对。H 是该程序对的元数据，本身并不是可执行代码。请参阅 main.s。
 .create "build/h.bin", 0
     .incbin "temp/h.bin"
+
+    // English: Reconstruct the released FlashMe template rather than an
+    // installation for one console.  Blank the copied Wi-Fi calibration and
+    // configuration region at +0x28..+0x17B.
+    // 中文：重建公开发布的 FlashMe 模板，而非某一台主机的安装结果。将复制来的
+    // Wi-Fi 校准与配置区域 +0x28..+0x17B 填充为 FF。
+    .orga 0x0028
+    .fill 0x0154, 0xff
     .if ShiftAmountsOverride >= 0
         // English: Replace the retail shift_amounts only for an intentional
         // format port.  This field controls how both ROM and RAM descriptor
@@ -37,17 +45,10 @@
     .orga HeaderTypeOffset
     .dh PrimaryTypeId
 
-    // English: The known V1/V3 Phat headers deliberately leave the Wi-Fi
-    // configuration checksum as FFFF.  Retain that historical header value
-    // instead of carrying the retail V3 checksum into the FlashMe header.
-    // 中文：已知 V1/V3 Phat 头会刻意把 Wi-Fi 配置校验保留为 FFFF。此处保留该历史
-    // 头部值，而不是把零售 V3 的校验带入 FlashMe 头。
-    .orga HeaderWifiConfigCrc16Offset
+    // English: The public release template fixes the source/private marker at
+    // +0x17E to FFFF.  Do not import a retail P1/P2 CRC16 into this field.
+    // 中文：公开发布模板会将 +0x17E 的来源/私有标记固定为 FFFF；不得把零售
+    // P1/P2 CRC16 导入该字段。
+    .orga HeaderOriginalVersionOffset
     .dh 0xffff
-
-    // English: +0x17E remains untouched after the initial source-header copy.
-    // Known V1/V3 Phat templates contain FFFF here; this field is not a copy of
-    // H +0x006 and is not recomputed by the patch.
-    // 中文：初始复制源头后，+0x17E 保持不改。已知 V1/V3 Phat 模板此处为 FFFF；
-    // 它不是 H +0x006 的副本，也不会由补丁重算。
 .close

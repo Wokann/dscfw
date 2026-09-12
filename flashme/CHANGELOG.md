@@ -4,6 +4,25 @@
 ARMIPS 源作为主证据：每一项结论都应能回到具体的 P1、P2、FP1、FP2 或头部补丁中检查，
 而不是只复述发布帖。
 
+
+## Public-image reconstruction policy / 公开镜像重构策略
+
+**English.** These projects reconstruct the publicly released FlashMe image
+templates, not a per-console installation.  Both H and FH explicitly fill
+`+0x28..+0x17B` (the copied Wi-Fi calibration/configuration field) and
+`+0x17E` with `FF`.  Their Makefiles intentionally omit `-b`, so no retail
+Wi-Fi, user-settings tail, or other base-image data is imported.  Each result
+is a complete `0x40000`-byte image filled with `FF` outside its components.
+The two-byte terminal installer-carrier CRC at `0x3FDFE..0x3FDFF` is not
+emitted because it is not part of the firmware program.
+
+**中文。** 这些工程重建的是公开发布的 FlashMe 镜像模板，而不是某台主机的
+安装结果。H 与 FH 都会显式将 `+0x28..+0x17B`（从源头复制来的 Wi-Fi
+校准/配置字段）及 `+0x17E` 填充为 `FF`。Makefile 有意不使用 `-b`，故不会
+导入零售固件的 Wi-Fi、用户设置尾区或其他基底镜像数据。输出固定为完整
+`0x40000` 字节，组件之外均为 `FF`。发布载体末尾
+`0x3FDFE..0x3FDFF` 的两字节 CRC 不会写入，因为它不属于固件程序。
+
 ## 证据标记与资料边界
 
 - **[S] 源码证据**：重建汇编中的实际指令、条件分支和布局。例如

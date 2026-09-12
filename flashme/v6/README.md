@@ -74,8 +74,8 @@ different B-route behavior.
 
 V6 sets `shift_amounts` to `0x0C71`, so components use 8-byte descriptor
 alignment.  The primary H marker is `2`, while the secondary FH marker is `3`.
-The primary P1/P2 CRC16 from the V3 source header is retained at `+0x17E` in
-both headers as FlashMe's source-firmware marker.
+For public-image reconstruction, both headers instead fix `+0x17E` to
+`FFFF` and blank the copied Wi-Fi calibration/configuration field.
 
 The Makefile pins the historical V6 Phat physical layout:
 
@@ -165,8 +165,8 @@ RAM 入口的官方 V3 P1 或 P2 主体组成。FP2 发布 B/C/D IPC 阶段，FP
 常规版与 Stealth 版共享保留主体，但在 B 路径上采用不同的行为。
 
 V6 将 `shift_amounts` 设为 `0x0C71`，因此组件描述符采用 8 字节对齐。一级 H 标记为
-`2`，二级 FH 标记为 `3`。源 V3 头中的一级 P1/P2 CRC16 会保存在两份头的 `+0x17E`，
-作为 FlashMe 的来源固件标记。
+`2`，二级 FH 标记为 `3`。为重建公开镜像，两份头的 `+0x17E` 固定为 `FFFF`，
+且从源头复制来的 Wi-Fi 校准/配置字段会填充为空。
 
 Makefile 固定 V6 Phat 的历史物理布局：
 
