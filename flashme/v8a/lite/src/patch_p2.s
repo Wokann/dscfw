@@ -1,9 +1,4 @@
-// FlashMe V8a Lite primary ARM7 bootstrap.
-//
-// The V8a Lite variants use this same P2.  It remains local to the Lite package
-// so that the project can be built or moved independently from Phat.
-//
-// 所有 V8a Lite 变体均使用同一份 P2。它保留在 Lite 包内，因此工程可独立构建或迁移。
+
 .create "build/p2.bin", 0
     .headersize PrimaryP2RamAddress
     .arm
@@ -31,8 +26,7 @@ p2_thumb:
     bne p2_service_boot
 
 p2_recovery_boot:
-    // Ask P1 to clear ARM9-visible cold-start state before ARM7 header work.
-    // 请求 P1 先清理 ARM9 可见的冷启动状态，再执行 ARM7 的头处理。
+
     mov r0, #1
     ldr r5, [p2_slot_primary_p1_command]
     strh r0, [r5]
@@ -113,8 +107,7 @@ p2_wait_p1:
     bx r1
 
 p2_copy_boot:
-    // The table supplies the ARM9 trampoline and ARM7 continuation.
-    // 该表提供 ARM9 跳板及 ARM7 续接地址。
+
     ldmia r7!, {r0-r4}
     stmia r3!, {r0-r2}
     str r0, [r4, #4]
@@ -380,21 +373,3 @@ p2_slot_card_control:
 p2_slot_gc_data_in:
     .dw REG_GCDATAIN
 .close
-
-// =============================================================================
-// C flow model (English)
-// =============================================================================
-//
-// PrimaryP2V8a is the first-stage policy owner.  It publishes a command to P1,
-// performs ARM7 header/SPI work, and transfers into the inherited loader ABI.
-// The `BOOT` comparison and low-key test select recovery/card transfer;
-// otherwise it decodes FH descriptors and publishes the ARM9 continuation at
-// P1 + 4.
-//
-// =============================================================================
-// C 流程模型（中文）
-// =============================================================================
-//
-// PrimaryP2V8a 是一级启动策略的主控。它向 P1 发布命令、执行 ARM7 的头/SPI 工作，
-// 再转入继承加载器 ABI。`BOOT` 比较和低位按键测试选择恢复/卡带传输路径；否则会解码
-// FH 描述符，并将 ARM9 续接地址发布至 P1 + 4。

@@ -1,17 +1,9 @@
-// Stage 2 ARM7 half for FlashMe V7 Old Phat.
-//
-// FP2 is the route producer for FP1.  It detects the service/FlashMe route,
-// publishes B/C/E through IPC_SYNC, and leaves the retained P2 from official_v3.bin
-// body at its original RAM entry after a 0x400-byte FlashMe prefix.
-// FP2 是 FP1 的路径生产端：它检测服务/FlashMe 路径，经由 IPC_SYNC 发布 B/C/E，
-// 并在 0x400 字节 FlashMe 前置代码后将保留的官方 V3 P2 主体留在原 RAM 入口。
+
 .create "build/fp2.bin", 0
     .headersize FlashMeFp2RamAddress
     .area FlashMePrefixBytes, 0x00
     .arm
 
-    // The entry value is retained for byte/layout compatibility with V7 Old.
-    // 入口值为保持 V7 Old 的字节与布局兼容而保留。
     mov r0, #7
     ldr r0, [fp2_slot_powercnt]
     mov r1, #1
@@ -22,9 +14,7 @@
 
     ldr r10, [fp2_slot_keyinput]
     ldrh r0, [r10]
-    // KEYINPUT and KEYXY are active-low.  Select chooses the service route;
-    // A+B+X+Y chooses the FlashMe route.
-    // KEYINPUT 与 KEYXY 均为低有效。Select 选择服务路径；A+B+X+Y 选择 FlashMe 路径。
+
     tst r0, #KEY_SELECT
     beq fp2_service_boot
     ands r0, r0, #(KEY_A | KEY_B)
@@ -34,8 +24,7 @@
     beq fp2_flash_boot
 
 fp2_check_boot_state:
-    // The table holds the GBA title address and DSBooter/PASS test words.
-    // 表中保存 GBA 标题地址与 DSBooter/PASS 测试字。
+
     adr r0, fp2_boot_state
     ldmia r0, {r1-r4}
     ldmia r1, {r6-r9}
@@ -46,11 +35,6 @@ fp2_check_boot_state:
     cmp r7, r3
     beq fp2_flash_boot
 
-    // The non-title route probes the auxiliary serial interface.  A successful
-    // response can invoke the shared cold routine with a continuation obtained
-    // from the firmware work area; otherwise the code falls through to B.
-    // 非标题路径会探测辅助串行接口。成功响应可带着固件工作区中的续接进入共享冷启动
-    // 例程；否则代码会顺序落入 B 路径。
 fp2_aux_probe:
     bl fp2_aux_enable
     mov r0, #0xf2
@@ -108,14 +92,12 @@ fp2_service_boot:
     strh r0, [r10, #0x50]
 
     .if BuildStealth
-        // Stealth B returns directly to retained P2.
-        // Stealth 的 B 路径直接返回保留 P2。
+
         ldr lr, [fp2_slot_arm9_return]
         ldr lr, [lr]
         b fp2_retail
     .else
-        // Normal V7 Old retains the service timing sequence before E.
-        // 常规版 V7 Old 会在 E 之前保留服务时序。
+
         mov r5, #0x1000
         mov r6, #0x20000
         mov r7, #0x1800
@@ -150,11 +132,6 @@ fp2_ipc_call:
         ldmia sp!, {pc}
     .endif
 
-    // The normal and Stealth code paths intentionally use different offsets
-    // for this compact title table.  The source label keeps every branch tied
-    // to the table rather than to a fixed absolute address.
-    // 常规与 Stealth 路径有意为这张紧凑标题表使用不同偏移。源码标签使各分支与表绑定，
-    // 而非绑定到固定绝对地址。
     .org FlashMeFp2RamAddress + Fp2BootStateOffset
 fp2_boot_state:
     .dw GbaRomTitleAddress
@@ -183,10 +160,6 @@ fp2_cold_boot:
     mov r2, #0x20
     swihi SwiArm7CpuFastSetImmediate
 
-    // The entry call already cleared DMA state.  V7 Old now writes the
-    // observed SPI commands directly, then rendezvous with FP1 at phase E.
-    // 入口调用已经清除了 DMA 状态。V7 Old 随后直接写入已观察到的 SPI 命令，并在 E
-    // 阶段与 FP1 会合。
     bl fp2_boot_return
     mov r0, #0x8a00
     mov r1, #0x84
@@ -292,9 +265,6 @@ fp2_boot_return:
     ldr r3, [fp2_slot_bios_boot_return]
     bx r3
 
-    // The original binary's literal pool is part of its executable layout.
-    // Keep it at the observed variant-specific offset.
-    // 原二进制的字面量池是可执行布局的一部分。将其保留在观察到的按变体区分的偏移。
     .if BuildStealth
         .org FlashMeFp2RamAddress + 0x2c8
     .else
@@ -335,8 +305,7 @@ fp2_slot_bios_boot_return:
     .endarea
 
 fp2_retail:
-    // RetailP2RamAddress = FlashMeFp2RamAddress + FlashMePrefixBytes.
-    // 零售 P2 的运行地址等于 FlashMeFp2RamAddress + FlashMePrefixBytes。
+
     .org RetailP2RamAddress
     .incbin "temp/p2.bin"
 fp2_retail_end:
@@ -344,64 +313,3 @@ fp2_retail_end:
         .error "FlashMe: FP2 overlaps the primary P2 staging window"
     .endif
 .close
-
-// =============================================================================
-// C flow model (English)
-// =============================================================================
-// static bool SelectFlashRoute(void)
-// {
-//     if ((REG_KEYINPUT & KEY_SELECT) == 0)
-//         return false;
-//     if ((REG_KEYINPUT & (KEY_A | KEY_B)) == 0 &&
-//         (REG_KEYXY & (KEYXY_X | KEYXY_Y)) == 0)
-//         return true;
-//
-//     const u32 *title = (const u32 *)GbaRomTitleAddress;
-//     return title[3] == 0x53534150 ||       // PASS
-//            (title[0] == 0x6f425344 &&     // DSBo
-//             title[1] == 0x7265746f);      // oter
-// }
-//
-// static __attribute__((noreturn)) void RunFp2V7(bool stealth)
-// {
-//     if (!SelectFlashRoute()) {
-//         REG_IPC_SYNC = 0x0b00;
-//         if (!stealth) {
-//             RunServiceTiming();
-//             REG_IPC_SYNC = 0x0e00;
-//         }
-//         EnterRetailP2(*(volatile u32 *)Arm9ReturnSlotFp2);
-//     }
-//
-//     REG_IPC_SYNC = 0x0c00;
-//     CopySecondaryHeaderAndPrepareSpi();
-//     REG_IPC_SYNC = 0x0e00;
-//     while ((REG_IPC_SYNC & 0x0f) != 0x0e) { }
-//     EnterArm7ReturnEntry();
-// }
-//
-// =============================================================================
-// C 流程模型（中文）
-// =============================================================================
-// FP2 先按低有效按键、再按 Slot-2 标题选择路径。普通服务路径发布 B；常规版随后执行
-// 服务时序并发布 E，Stealth 则立即进入保留 P2。FlashMe 路径发布 C，复制 FH、准备 SPI，
-// 再与 FP1 在 E 会合。辅助 SPI 探测是一条历史的替代入口，可在验证到响应后复用冷启动
-// 准备例程。
-//
-// =============================================================================
-// Coordination and design analysis (English)
-// =============================================================================
-// FP2 is the second-stage ARM7 coordinator.  It is the only member that
-// decides whether the retained firmware service path or FlashMe cold path runs,
-// and it communicates that decision to FP1 through IPC_SYNC.  FP1 therefore
-// does not race it for route selection.  The normal/Stealth condition changes
-// only the B-route timing and compact-prefix layout; C continues to use the
-// same header copy, peripheral setup, and E rendezvous protocol.
-//
-// =============================================================================
-// 协同与设计解析（中文）
-// =============================================================================
-// FP2 是第二阶段的 ARM7 协调器。只有它决定执行保留固件服务路径还是 FlashMe 冷启动
-// 路径，并通过 IPC_SYNC 将决定传给 FP1，因而 FP1 不会与它竞争路径选择。常规版与
-// Stealth 的条件差异仅改变 B 路径时序及紧凑前置布局；C 路径仍使用相同的头复制、
-// 外设准备与 E 会合协议。

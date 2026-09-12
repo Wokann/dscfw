@@ -1,15 +1,4 @@
-// FlashMe V8a Lite symbols.
-//
-// The first sections are Nintendo DS format/ABI constants.  The last section
-// contains only the V8a Lite choices, so this package remains independent from
-// the Phat reconstruction.
-//
-// 前几部分是 Nintendo DS 格式/ABI 固定值；最后一部分才是 V8a Lite 的选择，
-// 从而使本包独立于 Phat 重建工程。
 
-// -----------------------------------------------------------------------------
-// Nintendo DS hardware map and BIOS ABI (platform-fixed)
-// -----------------------------------------------------------------------------
 .definelabel REG_KEYINPUT,                  0x04000130
 .definelabel REG_KEYXY,                     0x04000136
 .definelabel REG_IPC_SYNC,                  0x04000180
@@ -48,9 +37,6 @@
 .definelabel PrimaryP2LegacyCopyRoutine,    0x000033a5
 .definelabel PrimaryP2LegacyCallbackValue,  0x000022c7
 
-// -----------------------------------------------------------------------------
-// Nintendo DS firmware descriptor format (format-fixed)
-// -----------------------------------------------------------------------------
 .definelabel FirmwareHeaderSize,            0x00000180
 .definelabel HeaderPart12Crc16Offset,       0x0006
 .definelabel HeaderPart1RamaddrOffset,      0x000e
@@ -59,10 +45,6 @@
 .definelabel FirmwarePart1RamaddrBase,      0x02800000
 .definelabel FirmwarePart2RamaddrBase,      0x03810000
 
-// Official V8a writes 0x0c71 to both descriptors.  Retained V6 code keeps its
-// native runtime entry addresses; only descriptor fields are re-encoded.
-// 官方 V8a 会向两份描述符写入 0x0c71。保留的 V6 代码仍使用原运行时入口；
-// 仅描述符字段会按新单位重新编码。
 .definelabel ShiftAmountsFlashMe,           0x0c71
 .definelabel ShiftAmountsOriginal,          -1
 .definelabel ShiftAmountsOverride,          ShiftAmountsFlashMe
@@ -74,15 +56,9 @@
 .expfunc Part2RamFromSourceField(field), FirmwarePart2RamaddrBase - ((field) << (2 + ((SourceShiftAmounts >> 9) & 7)))
 .definelabel RetailP1RamAddress,            Part1RamFromSourceField(readu16("temp/h.bin", HeaderPart1RamaddrOffset))
 .definelabel RetailP2RamAddress,            Part2RamFromSourceField(readu16("temp/h.bin", HeaderPart2RamaddrOffset))
-// Nintendo official V3/V6 P3 executes with this component base; embedded
-// absolute pointers resolve as this address plus their raw P3 offsets.
-// 任天堂官方 V3/V6 的 P3 以此组件基址运行；其嵌入的绝对指针会解析为此地址加上
-// 原始 P3 组件偏移。
+
 .definelabel RetailP3RamAddress,            0x02380000
 
-// -----------------------------------------------------------------------------
-// FlashMe V8a Lite placement, state, and identity (patch-defined)
-// -----------------------------------------------------------------------------
 .definelabel FlashMePrefixBytes,            0x00000400
 .definelabel PrimaryP1StagingPageBytes,     0x00010000
 .expfunc Arm9RetailRegionFloor(address),    (address) & 0xffe00000
@@ -102,11 +78,6 @@
 .definelabel PrimaryP2LegacyPoolOffset,     0x000001a0
 .definelabel PrimaryP2PoolOffset,           0x00000218
 
-// These two constants describe the original 256 KiB V8a image and keep the
-// first reconstruction byte-identical.  A capacity port must update them with
-// the paired FH placement rather than moving data alone.
-// 这两个常量描述原始 256 KiB V8a 镜像并保证首次重建逐字节一致。容量迁移必须
-// 与 FH 的配套位置一同更新，不能只移动数据。
 .definelabel FlashMeFirmwareBytes,          0x0003fe00
 .definelabel FlashMePrimaryHeaderAddress,   0x0003f680
 .definelabel FlashMeHeaderRamAddress,       0x023ffc80
@@ -138,17 +109,11 @@
 .definelabel LiteSpiInitialControl,         0x00008802
 .definelabel LiteSpiFollowupControl,        0x00008002
 
-// English: FlashMe-owned header-tail fields.  +0x17C selects the
-// published FlashMe type; public-image reconstruction fixes +0x17E to FFFF.
-// 中文：FlashMe 自有的头尾字段中，+0x17C 选择公开模板的 FlashMe 类型；
-// 公开镜像重构将 +0x17E 固定为 FFFF。
 .definelabel HeaderTypeOffset,              0x017c
 .definelabel HeaderOriginalVersionOffset,   0x017e
 .definelabel PrimaryTypeId,                 0x0002
 .definelabel FlashMeTypeId,                 0x0005
 
-// V8a's additional ARM9 preparation places FP1's pool 0x14 bytes after V8.
-// V8a 额外的 ARM9 准备操作使 FP1 pool 比 V8 晚 0x14 字节。
 .if BuildStealth
     .definelabel Fp1ContextOffset,          0x0054
     .definelabel Fp1ColdPrepareOffset,      0x006c
@@ -159,11 +124,6 @@
     .definelabel Fp1PoolOffset,             0x0180
 .endif
 
-// V8a NoAuto has the Select-only dispatch sequence, which is 0x0c bytes
-// shorter than the V8 Lite A+B+X+Y dispatch.  The preserved title block and
-// following helpers shift together; Normal and Stealth retain V8 positions.
-// V8a NoAuto 的仅 Select 分派比 V8 Lite 的 A+B+X+Y 分派短 0x0c。保留的标题块
-// 和后续帮助例程会一同前移；常规与 Stealth 则保留 V8 的位置。
 .if BuildStealth
     .if BuildNoAuto
         .definelabel Fp2ServiceOffset,      0x0054

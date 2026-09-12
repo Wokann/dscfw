@@ -1,11 +1,4 @@
-// FlashMe V8a Phat primary ARM7 bootstrap.
-//
-// The official V8a Phat variants use this same P2.  It is kept inside the Phat
-// package rather than a shared directory, so this project has no source-level
-// dependency on the Lite package.
-//
-// 所有官方 V8a Phat 变体均使用同一份 P2。它保留在 Phat 包内而非共享目录，
-// 因此本工程在源码层面不依赖 Lite 包。
+
 .create "build/p2.bin", 0
     .headersize PrimaryP2RamAddress
     .arm
@@ -33,9 +26,7 @@ p2_thumb:
     bne p2_service_boot
 
 p2_recovery_boot:
-    // Ask P1 to perform its ARM9-visible cold-start cleanup before we issue
-    // the ARM7 SPI/header sequence.
-    // 请求 P1 先完成 ARM9 可见状态的冷启动清理，然后执行 ARM7 的 SPI/头处理序列。
+
     mov r0, #1
     ldr r5, [p2_slot_primary_p1_command]
     strh r0, [r5]
@@ -52,9 +43,6 @@ p2_recovery_boot:
     ldr r2, [p2_slot_header_size]
     bl p2_copy
 
-    // The two halfwords choose whether the copied header needs the fast-copy
-    // operation before the card-transfer setup proceeds.
-    // 两个半字决定卡带传输设置前是否需要执行快速复制操作。
     ldr r0, [p2_slot_primary_header_compare]
     ldrh r1, [r0]
     ldr r0, [p2_slot_secondary_header_compare]
@@ -119,20 +107,13 @@ p2_wait_p1:
     bx r1
 
 p2_copy_boot:
-    // The bootstrap table supplies the ARM9 trampoline and the matching ARM7
-    // continuation for the alternate card/recovery route.
-    // 引导表提供兼容卡带/恢复路径所需的 ARM9 跳板及对应 ARM7 续接地址。
+
     ldmia r7!, {r0-r4}
     stmia r3!, {r0-r2}
     str r0, [r4, #4]
     add r6, #0x14
     b p2_handoff
 
-    // The card reader is physically kept in the early bootstrap window.  Its
-    // placement is part of the original V8a layout because the preceding BL
-    // calls use short Thumb offsets.
-    // 卡带读取器在物理上保留于早期引导窗口；其位置是原始 V8a 布局的一部分，因为
-    // 前方的 BL 调用依赖短 Thumb 偏移。
     .org PrimaryP2RamAddress + PrimaryP2CardTransferOffset
 p2_card_transfer:
     push {r4-r7, lr}
@@ -392,21 +373,3 @@ p2_slot_card_control:
 p2_slot_gc_data_in:
     .dw REG_GCDATAIN
 .close
-
-// =============================================================================
-// C flow model (English)
-// =============================================================================
-//
-// PrimaryP2V8a is the only first-stage policy owner.  It publishes the command
-// to P1, performs the ARM7-side header/SPI work, and then transfers control to
-// an inherited loader ABI.  The `BOOT` comparison and low-key test select the
-// recovery/card route; otherwise the code decodes FH descriptors and releases
-// the ARM9 continuation through P1 + 4.
-//
-// =============================================================================
-// C 流程模型（中文）
-// =============================================================================
-//
-// PrimaryP2V8a 是唯一掌握一级启动策略的一方。它向 P1 发布命令，执行 ARM7 的
-// 头/SPI 操作，然后转入继承加载器 ABI。`BOOT` 比较和低位按键测试会选择恢复/卡带
-// 路径；否则代码会解码 FH 描述符，并通过 P1 + 4 发布 ARM9 续接地址。

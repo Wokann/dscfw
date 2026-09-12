@@ -1,10 +1,4 @@
-// FlashMe V8a Lite second-stage ARM7 prefix.
-//
-// FP2 owns second-stage route selection and serializes FP1 by publishing B/C/E
-// through IPC_SYNC. The retained P2 from official_v6.bin begins after this 0x400-byte prefix.
-//
-// FP2 掌握二级路径选择，并通过 IPC_SYNC 发布 B/C/E 以串行化 FP1。保留的官方 V6 P2
-// 紧接在这个 0x400 字节前置区之后。
+
 .create "build/fp2.bin", 0
     .headersize FlashMeFp2RamAddress
     .area FlashMePrefixBytes, 0x00
@@ -22,10 +16,7 @@
     ldrh r0, [r10]
 
     .if BuildNoAuto
-        // Official V8a NoAuto uses Select as its explicit FlashMe request.
-        // The retained title-test block is deliberately unreachable layout data.
-        // 官方 V8a NoAuto 以 Select 作为明确的 FlashMe 请求；保留的标题测试块
-        // 刻意作为不可达布局数据保留。
+
         tst r0, #KEY_SELECT
         bne fp2_service_boot
         b fp2_flash_boot
@@ -41,10 +32,7 @@ fp2_retained_boot_state_check:
         cmp r7, r3
         beq fp2_flash_boot
     .else
-        // KEYINPUT/KEYXY are active-low.  Select retains service; A+B+X+Y or
-        // a DSBooter/PASS title chooses the FlashMe route.
-        // KEYINPUT/KEYXY 为低有效：Select 保留服务路径；A+B+X+Y 或
-        // DSBooter/PASS 标题选择 FlashMe 路径。
+
         tst r0, #KEY_SELECT
         beq fp2_service_boot
         ands r0, r0, #(KEY_A | KEY_B)
@@ -72,14 +60,12 @@ fp2_service_boot:
     bl fp2_header_copy
 
     .if BuildStealth
-        // Stealth returns straight to retained ARM7 after copying FH.
-        // Stealth 在复制 FH 后直接返回保留 ARM7。
+
         ldr lr, [fp2_slot_arm9_return]
         ldr lr, [lr]
         b fp2_retail
     .else
-        // Normal Lite uses the observed BIOS-loop delay before phase E.
-        // 常规 Lite 在 E 阶段前使用观测到的 BIOS 循环延时。
+
         mov r0, #0x280000
         swi SwiArm7WaitByLoopImmediate
         mov r0, #0x0e00
@@ -136,8 +122,6 @@ fp2_wait_e:
     bne fp2_wait_e
     bx r11
 
-    // Retained auxiliary-card/DMA helpers preserve the official V8a layout.
-    // 保留辅助卡/DMA 帮助例程以维持官方 V8a 布局。
     .org FlashMeFp2RamAddress + Fp2AuxOffset
 fp2_aux_enable:
     ldr r0, [fp2_slot_aux_spi_control]
@@ -241,8 +225,6 @@ fp2_header_copy:
     mov r2, #0x20
     swihi SwiArm7CpuFastSetImmediate
 
-    // Lite performs the two-step SPI setup for every V8a variant.
-    // Lite 会为每个 V8a 变体执行两步 SPI 设置。
     mov r0, #0x84
     mov r1, #0
     bl fp2_lite_setup
@@ -308,8 +290,7 @@ fp2_slot_bios_boot_return:
     .endarea
 
 fp2_retail:
-    // RetailP2RamAddress = FlashMeFp2RamAddress + FlashMePrefixBytes.
-    // 零售 P2 的运行地址等于 FlashMeFp2RamAddress + FlashMePrefixBytes。
+
     .org RetailP2RamAddress
     .incbin "temp/p2.bin"
 fp2_retail_end:
@@ -317,33 +298,3 @@ fp2_retail_end:
         .error "FlashMe: FP2 overlaps the primary P2 staging window"
     .endif
 .close
-
-// =============================================================================
-// C flow model (English)
-// =============================================================================
-//
-// static bool SelectV8aLiteRoute(void)
-// {
-// #if BUILD_NOAUTO
-//     return (REG_KEYINPUT & KEY_SELECT) == 0;
-// #else
-//     if ((REG_KEYINPUT & KEY_SELECT) == 0)
-//         return false;
-//     if ((REG_KEYINPUT & (KEY_A | KEY_B)) == 0 &&
-//         (REG_KEYXY & (KEYXY_X | KEYXY_Y)) == 0)
-//         return true;
-//     return IsDsBooterOrPassTitle((const char *)GbaRomTitleAddress);
-// #endif
-// }
-//
-// FP2 publishes B for retained service and C/E for a FlashMe cold boot.  Lite
-// uses its observed delay on the normal B route and its two-step SPI setup in
-// every variant.
-//
-// =============================================================================
-// C 流程模型（中文）
-// =============================================================================
-//
-// NoAuto 仅在 Select 被按下时选择 FlashMe；其他变体还接受 A+B+X+Y 组合及
-// DSBooter/PASS 标题。FP2 为保留服务路径发布 B，为冷启动发布 C/E。Lite 的常规 B
-// 路径采用观测到的延时，且所有变体均执行两步 SPI 设置。

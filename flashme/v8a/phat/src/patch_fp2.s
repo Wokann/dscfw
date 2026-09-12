@@ -1,10 +1,4 @@
-// FlashMe V8a Phat second-stage ARM7 prefix.
-//
-// FP2 owns second-stage route selection.  It publishes B/C/E through IPC_SYNC
-// so FP1 cannot independently select a conflicting ARM9 path.
-//
-// FP2 掌握二级路径选择，并通过 IPC_SYNC 发布 B/C/E，使 FP1 不会独立选择冲突的
-// ARM9 路径。
+
 .create "build/fp2.bin", 0
     .headersize FlashMeFp2RamAddress
     .area FlashMePrefixBytes, 0x00
@@ -21,10 +15,7 @@
     ldrh r0, [r10]
 
     .if BuildNoAuto
-        // Official V8a NoAuto uses Select as the explicit FlashMe request;
-        // the retained title-test block below is intentionally unreachable.
-        // 官方 V8a NoAuto 以 Select 作为显式 FlashMe 请求；下方保留的标题测试块
-        // 会有意保持不可达。
+
         tst r0, #KEY_SELECT
         bne fp2_service_boot
         b fp2_flash_boot
@@ -40,10 +31,7 @@ fp2_retained_boot_state_check:
         cmp r7, r3
         beq fp2_flash_boot
     .else
-        // KEYINPUT/KEYXY are active-low.  Select requests retail service;
-        // A+B+X+Y or the DSBooter/PASS title requests FlashMe.
-        // KEYINPUT/KEYXY 为低有效：Select 请求零售服务；A+B+X+Y 或
-        // DSBooter/PASS 标题请求 FlashMe。
+
         tst r0, #KEY_SELECT
         beq fp2_service_boot
         ands r0, r0, #(KEY_A | KEY_B)
@@ -74,8 +62,7 @@ fp2_service_boot:
         ldr lr, [lr]
         b fp2_retail
     .else
-        // V8a Phat keeps the observed IPC timing loop before phase E.
-        // V8a Phat 在发布 E 前保留观测到的 IPC 时序循环。
+
         mov r5, #0x1000
         mov r6, #0x20000
         mov r7, #0x1800
@@ -144,8 +131,6 @@ fp2_wait_e:
     bne fp2_wait_e
     bx r11
 
-    // Retained auxiliary-card / DMA helpers preserve the official V8a layout.
-    // 保留辅助卡 / DMA 帮助例程以维持官方 V8a 布局。
     .org FlashMeFp2RamAddress + Fp2AuxOffset
 fp2_aux_enable:
     ldr r0, [fp2_slot_aux_spi_control]
@@ -302,35 +287,7 @@ fp2_slot_bios_boot_return:
     .endarea
 
 fp2_retail:
-    // RetailP2RamAddress = FlashMeFp2RamAddress + FlashMePrefixBytes.
-    // 零售 P2 的运行地址等于 FlashMeFp2RamAddress + FlashMePrefixBytes。
+
     .org RetailP2RamAddress
     .incbin "temp/p2.bin"
 .close
-
-// =============================================================================
-// C flow model (English)
-// =============================================================================
-//
-// static bool SelectV8aRoute(void)
-// {
-// #if BUILD_NOAUTO
-//     return (REG_KEYINPUT & KEY_SELECT) == 0;
-// #else
-//     if ((REG_KEYINPUT & KEY_SELECT) == 0) return false;
-//     if ((REG_KEYINPUT & (KEY_A | KEY_B)) == 0 &&
-//         (REG_KEYXY & (KEYXY_X | KEYXY_Y)) == 0) return true;
-//     return IsDsBooterOrPassTitle((const char *)GbaRomTitleAddress);
-// #endif
-// }
-//
-// FP2 publishes B for the retail service route and C/E for cold FlashMe boot.
-// The Phat normal route retains its observed IPC timing loop; Stealth skips it.
-//
-// =============================================================================
-// C 流程模型（中文）
-// =============================================================================
-//
-// NoAuto 仅在 Select 被按下时选择 FlashMe；其他变体还接受 A+B+X+Y 组合及
-// DSBooter/PASS 标题。FP2 为零售服务路径发布 B，为冷启动发布 C/E。Phat 常规版
-// 保留观测到的 IPC 时序循环，Stealth 则跳过该循环。

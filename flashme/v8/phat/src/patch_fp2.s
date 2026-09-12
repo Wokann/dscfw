@@ -1,17 +1,9 @@
-// Stage 2 ARM7 half for FlashMe V8 Phat.
-//
-// FP2 decides whether to resume the retained service path or begin the
-// FlashMe cold path. It retains the P2 body from official_v3.bin at its original RAM
-// entry after a 0x400-byte FlashMe prefix.
-// FP2 决定恢复保留的服务路径还是启动 FlashMe 冷路径。它在 0x400 字节的
-// FlashMe 前置区之后，将官方 V3 的 P2 主体保留在原始 RAM 入口。
+
 .create "build/fp2.bin", 0
     .headersize FlashMeFp2RamAddress
     .area FlashMePrefixBytes, 0x00
     .arm
 
-    // V8 changes the historical entry value from seven to eight.
-    // V8 将历史入口值从七改为八。
     mov r0, #8
     ldr r0, [fp2_slot_powercnt]
     mov r1, #1
@@ -24,10 +16,7 @@
     ldrh r0, [r10]
 
     .if BuildNoAuto
-        // NoAuto deliberately omits Select and Slot-2 title auto-detection.
-        // Only the all-active-low A+B+X+Y chord selects FlashMe.
-        // NoAuto 有意省略 Select 与 Slot-2 标题的自动检测。只有 A+B+X+Y
-        // 同时低有效时才选择 FlashMe。
+
         ands r0, r0, #(KEY_A | KEY_B)
         bne fp2_service_boot
         ldrh r0, [r10, #(REG_KEYXY - REG_KEYINPUT)]
@@ -35,11 +24,6 @@
         bne fp2_service_boot
         b fp2_flash_boot
 
-        // The following dormant title test is retained in the NoAuto image.
-        // The unconditional branch above prevents it from affecting NoAuto
-        // policy, while retaining the original prefix layout and data table.
-        // 下列闲置标题测试会保留在 NoAuto 镜像中。上方无条件跳转使其不会影响
-        // NoAuto 策略，同时保留原始前置区布局与数据表。
 fp2_retained_boot_state_check:
         adr r0, fp2_boot_state
         ldmia r0, {r1-r4}
@@ -51,12 +35,7 @@ fp2_retained_boot_state_check:
         cmp r7, r3
         beq fp2_flash_boot
     .else
-        // KEYINPUT and KEYXY are active-low.  Select picks the service path;
-        // A+B+X+Y picks FlashMe.  Otherwise V8 recognizes the DSBooter/PASS
-        // Slot-2 title sequence and uses it as an automatic FlashMe route.
-        // KEYINPUT 与 KEYXY 均为低有效。Select 选择服务路径；A+B+X+Y 选择
-        // FlashMe。否则 V8 会识别 Slot-2 中的 DSBooter/PASS 标题序列，并将其
-        // 用作自动 FlashMe 路径。
+
         tst r0, #KEY_SELECT
         beq fp2_service_boot
         ands r0, r0, #(KEY_A | KEY_B)
@@ -66,9 +45,7 @@ fp2_retained_boot_state_check:
         beq fp2_flash_boot
 
 fp2_check_boot_state:
-        // The table consists of the GBA title address followed by the words
-        // that represent the DSBooter/PASS sequence in little-endian order.
-        // 此表由 GBA 标题地址与按小端序表示 DSBooter/PASS 序列的比较字组成。
+
         adr r0, fp2_boot_state
         ldmia r0, {r1-r4}
         ldmia r1, {r6-r9}
@@ -87,16 +64,12 @@ fp2_service_boot:
     bl fp2_header_copy
 
     .if BuildStealth
-        // Stealth returns directly to the retained official P2 after copying
-        // the secondary header into its ARM7 work buffer.
-        // Stealth 在将二级头复制到 ARM7 工作缓冲区后，直接返回保留的官方 P2。
+
         ldr lr, [fp2_slot_arm9_return]
         ldr lr, [lr]
         b fp2_retail
     .else
-        // The normal Phat build retains the observed IPC timing loop before
-        // it publishes E and returns to the official P2 body.
-        // 常规 Phat 版会保留观测到的 IPC 时序循环，之后发布 E 并返回官方 P2 主体。
+
         mov r5, #0x1000
         mov r6, #0x20000
         mov r7, #0x1800
@@ -164,10 +137,6 @@ fp2_wait_e:
     bne fp2_wait_e
     bx r11
 
-    // These auxiliary-card and DMA helpers remain in the V8 prefix for layout
-    // compatibility.  The current route selector no longer calls them.
-    // 这些辅助卡与 DMA 帮助例程仍保留在 V8 前置区中以维持布局兼容；当前路径选择器
-    // 已不再调用它们。
     .org FlashMeFp2RamAddress + Fp2AuxOffset
 fp2_aux_enable:
     ldr r0, [fp2_slot_aux_spi_control]
@@ -221,11 +190,6 @@ fp2_dma_wait:
     bgt fp2_dma_copy
     bx lr
 
-    // The helper is retained as bytes even though V8 Phat does not invoke its
-    // two-step setup path.  Keeping it preserves the official literal-pool
-    // order and prefix layout for every V8 Phat variant.
-    // 虽然 V8 Phat 不调用此两步设置路径，仍保留该帮助例程的字节。这样可为所有
-    // V8 Phat 变体保留官方字面量池顺序与前置区布局。
     .org FlashMeFp2RamAddress + Fp2SpiSetupOffset
 fp2_spi_setup:
     stmdb sp!, {r1,lr}
@@ -329,8 +293,7 @@ fp2_slot_bios_boot_return:
     .endarea
 
 fp2_retail:
-    // RetailP2RamAddress = FlashMeFp2RamAddress + FlashMePrefixBytes.
-    // 零售 P2 的运行地址等于 FlashMeFp2RamAddress + FlashMePrefixBytes。
+
     .org RetailP2RamAddress
     .incbin "temp/p2.bin"
 fp2_retail_end:
@@ -338,74 +301,3 @@ fp2_retail_end:
         .error "FlashMe: FP2 overlaps the primary P2 staging window"
     .endif
 .close
-
-// =============================================================================
-// C flow model (English)
-// =============================================================================
-// static bool SelectFlashRoute(void)
-// {
-// #if BUILD_NOAUTO
-//     return (REG_KEYINPUT & (KEY_A | KEY_B)) == 0 &&
-//            (REG_KEYXY & (KEYXY_X | KEYXY_Y)) == 0;
-// #else
-//     if ((REG_KEYINPUT & KEY_SELECT) == 0)
-//         return false;
-//     if ((REG_KEYINPUT & (KEY_A | KEY_B)) == 0 &&
-//         (REG_KEYXY & (KEYXY_X | KEYXY_Y)) == 0)
-//         return true;
-//     const u32 *title = (const u32 *)GbaRomTitleAddress;
-//     return title[3] == 0x53534150 ||       // PASS
-//            (title[0] == 0x6f425344 &&     // DSBo
-//             title[1] == 0x7265746f);      // oter
-// #endif
-// }
-//
-// static __attribute__((noreturn)) void RunFp2V8Phat(bool stealth)
-// {
-//     if (!SelectFlashRoute()) {
-//         REG_IPC_SYNC = 0x0b00;
-//         CopySecondaryHeader();
-//         if (!stealth) {
-//             RunServiceTiming();
-//             REG_IPC_SYNC = 0x0e00;
-//         }
-//         EnterRetailP2(*(volatile u32 *)Arm9ReturnSlotFp2);
-//     }
-//
-//     REG_IPC_SYNC = 0x0c00;
-//     ClearDma();
-//     CopySecondaryHeader();
-//     BiosBootReturnRoutine();
-//     SpiWrite(0x8a00, 0x84);
-//     SpiWrite(0x8200, 0x00);
-//     REG_IPC_SYNC = 0x0e00;
-//     while ((REG_IPC_SYNC & 0x0f) != 0x0e) { }
-//     EnterArm7ReturnEntry();
-// }
-
-// =============================================================================
-// C 流程模型（中文）
-// =============================================================================
-// NoAuto 只接受低有效的 A+B+X+Y 组合；其余变体还会将 Select 作为服务路径选择，
-// 并检查 Slot-2 的 DSBooter/PASS 标题。服务路径先发布 B 并复制二级头；常规 Phat
-// 继续执行 IPC 时序、发布 E，Stealth 则直接进入保留 P2。冷启动路径发布 C、清除 DMA、
-// 复制二级头、调用 BIOS 返回准备，写入两个最终 SPI 命令，再在 E 与 FP1 会合。
-
-// =============================================================================
-// Coordination and design analysis (English)
-// =============================================================================
-// FP2 is the ARM7 owner of second-stage routing.  Its B/C/E IPC phases make
-// FP1 a follower: FP1 prepares ARM9 only after FP2 commits to C, so the two
-// processors cannot independently choose incompatible boot paths.  V8 keeps
-// old auxiliary and two-step SPI helper blocks for binary layout compatibility,
-// but its Phat route deliberately executes only the final two SPI writes.  The
-// NoAuto condition removes policy inputs rather than changing the underlying
-// B/C/E handshake or retained-component placement.
-
-// =============================================================================
-// 协同与设计解析（中文）
-// =============================================================================
-// FP2 是二级路径的 ARM7 所有者。它的 B/C/E IPC 阶段使 FP1 成为跟随者：只有 FP2
-// 确认进入 C 后，FP1 才准备 ARM9，因此两颗 CPU 不会独立选择彼此冲突的启动路径。V8
-// 为二进制布局兼容而保留旧辅助卡及两步 SPI 帮助块，但 Phat 路径刻意只执行最终两次 SPI
-// 写入。NoAuto 只是移除选择策略的输入，不改变底层 B/C/E 握手或保留组件的放置方式。

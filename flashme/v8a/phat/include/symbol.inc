@@ -1,15 +1,4 @@
-// FlashMe V8a Phat symbols.
-//
-// The first three sections are Nintendo DS format/ABI constants.  The final
-// section contains the FlashMe V8a placement and policy values.  Keeping the
-// two classes separate makes it clear which values may vary when porting.
-//
-// 前三部分是 Nintendo DS 格式/ABI 固定值；最后一部分才是 FlashMe V8a 的布局与
-// 策略值。二者分开可明确区分移植时哪些数值可以改变。
 
-// -----------------------------------------------------------------------------
-// Nintendo DS hardware map and BIOS ABI (platform-fixed)
-// -----------------------------------------------------------------------------
 .definelabel REG_KEYINPUT,                  0x04000130
 .definelabel REG_KEYXY,                     0x04000136
 .definelabel REG_IPC_SYNC,                  0x04000180
@@ -48,9 +37,6 @@
 .definelabel PrimaryP2LegacyCopyRoutine,    0x000033a5
 .definelabel PrimaryP2LegacyCallbackValue,  0x000022c7
 
-// -----------------------------------------------------------------------------
-// Nintendo DS firmware descriptor format (format-fixed)
-// -----------------------------------------------------------------------------
 .definelabel FirmwareHeaderSize,            0x00000180
 .definelabel HeaderPart12Crc16Offset,       0x0006
 .definelabel HeaderPart1RamaddrOffset,      0x000e
@@ -59,11 +45,6 @@
 .definelabel FirmwarePart1RamaddrBase,      0x02800000
 .definelabel FirmwarePart2RamaddrBase,      0x03810000
 
-// Official V8a writes 0x0c71 into both headers.  The retained V3 payloads
-// stay at their original runtime addresses; descriptor fields are re-encoded
-// under these V8a units.
-// 官方 V8a 会向两份头写入 0x0c71。保留的 V3 载荷仍位于原运行时地址；
-// 描述符字段则按这套 V8a 单位重新编码。
 .definelabel ShiftAmountsFlashMe,           0x0c71
 .definelabel ShiftAmountsOriginal,          -1
 .definelabel ShiftAmountsOverride,          ShiftAmountsFlashMe
@@ -75,15 +56,9 @@
 .expfunc Part2RamFromSourceField(field), FirmwarePart2RamaddrBase - ((field) << (2 + ((SourceShiftAmounts >> 9) & 7)))
 .definelabel RetailP1RamAddress,            Part1RamFromSourceField(readu16("temp/h.bin", HeaderPart1RamaddrOffset))
 .definelabel RetailP2RamAddress,            Part2RamFromSourceField(readu16("temp/h.bin", HeaderPart2RamaddrOffset))
-// Nintendo official V3/V6 P3 executes with this component base; embedded
-// absolute pointers resolve as this address plus their raw P3 offsets.
-// 任天堂官方 V3/V6 的 P3 以此组件基址运行；其嵌入的绝对指针会解析为此地址加上
-// 原始 P3 组件偏移。
+
 .definelabel RetailP3RamAddress,            0x02380000
 
-// -----------------------------------------------------------------------------
-// FlashMe V8a placement, state, and identity (patch-defined)
-// -----------------------------------------------------------------------------
 .definelabel FlashMePrefixBytes,            0x00000400
 .definelabel PrimaryP1StagingPageBytes,     0x00010000
 .expfunc Arm9RetailRegionFloor(address),    (address) & 0xffe00000
@@ -134,18 +109,11 @@
 .definelabel PhatSpiInitialControl,         0x00008802
 .definelabel PhatSpiFollowupControl,        0x00008002
 
-// English: FlashMe-owned header-tail fields.  +0x17C selects the
-// published FlashMe type; public-image reconstruction fixes +0x17E to FFFF.
-// 中文：FlashMe 自有的头尾字段中，+0x17C 选择公开模板的 FlashMe 类型；
-// 公开镜像重构将 +0x17E 固定为 FFFF。
 .definelabel HeaderTypeOffset,              0x017c
 .definelabel HeaderOriginalVersionOffset,   0x017e
 .definelabel PrimaryTypeId,                 0x0002
 .definelabel FlashMeTypeId,                 0x0005
 
-// V8a adds five ARM instructions before FP1's zero routine, so its literal
-// pool is 0x14 bytes later than V8's corresponding prefix.
-// V8a 在 FP1 清零例程前新增五条 ARM 指令，因此字面量池比 V8 对应前置区晚 0x14。
 .if BuildStealth
     .definelabel Fp1ContextOffset,          0x0054
     .definelabel Fp1ColdPrepareOffset,      0x006c
@@ -156,9 +124,6 @@
     .definelabel Fp1PoolOffset,             0x0180
 .endif
 
-// FP2 has a smaller NoAuto dispatch block.  The retained title-test code and
-// all later helpers remain in the image, merely moving 0x0c bytes earlier.
-// FP2 的 NoAuto 分派块更小；保留标题测试与后续帮助代码仍在镜像中，只整体前移 0x0c。
 .if BuildStealth
     .if BuildNoAuto
         .definelabel Fp2ServiceOffset,      0x0054

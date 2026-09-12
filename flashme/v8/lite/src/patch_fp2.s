@@ -1,17 +1,9 @@
-// Stage 2 ARM7 half for FlashMe V8 Lite.
-//
-// FP2 decides whether to resume the retained service path or begin the
-// FlashMe cold path. It retains the P2 body from official_v6.bin at its original RAM
-// entry after a 0x400-byte FlashMe prefix.
-// FP2 决定恢复保留的服务路径还是启动 FlashMe 冷路径。它在 0x400 字节的
-// FlashMe 前置区之后，将官方 V6 的 P2 主体保留在原始 RAM 入口。
+
 .create "build/fp2.bin", 0
     .headersize FlashMeFp2RamAddress
     .area FlashMePrefixBytes, 0x00
     .arm
 
-    // V8 changes the historical entry value from seven to eight.
-    // V8 将历史入口值从七改为八。
     mov r0, #8
     ldr r0, [fp2_slot_powercnt]
     mov r1, #1
@@ -24,11 +16,7 @@
     ldrh r0, [r10]
 
     .if BuildNoAuto
-        // NoAuto accepts only the all-active-low A+B+X+Y chord.  The dormant
-        // title test below is intentionally retained as unreachable layout
-        // data/code from the official NoAuto image.
-        // NoAuto 只接受同时低有效的 A+B+X+Y 组合。下方闲置标题测试会作为官方
-        // NoAuto 镜像中不可达的布局代码/数据而有意保留。
+
         ands r0, r0, #(KEY_A | KEY_B)
         bne fp2_service_boot
         ldrh r0, [r10, #(REG_KEYXY - REG_KEYINPUT)]
@@ -47,12 +35,7 @@ fp2_retained_boot_state_check:
         cmp r7, r3
         beq fp2_flash_boot
     .else
-        // KEYINPUT and KEYXY are active-low.  Select picks the service path;
-        // A+B+X+Y picks FlashMe.  Otherwise V8 recognizes the DSBooter/PASS
-        // Slot-2 title sequence and uses it as an automatic FlashMe route.
-        // KEYINPUT 与 KEYXY 均为低有效。Select 选择服务路径；A+B+X+Y 选择
-        // FlashMe。否则 V8 会识别 Slot-2 中的 DSBooter/PASS 标题序列，并将其
-        // 用作自动 FlashMe 路径。
+
         tst r0, #KEY_SELECT
         beq fp2_service_boot
         ands r0, r0, #(KEY_A | KEY_B)
@@ -80,17 +63,12 @@ fp2_service_boot:
     bl fp2_header_copy
 
     .if BuildStealth
-        // Stealth returns directly to retained official P2 after copying FH.
-        // Stealth 在复制 FH 后直接返回保留的官方 P2。
+
         ldr lr, [fp2_slot_arm9_return]
         ldr lr, [lr]
         b fp2_retail
     .else
-        // The ordinary Lite B route has the V8 delay sequence rather than the
-        // Phat IPC timing loop.  The following retained IPC helper is present
-        // in the image for compatibility but is not called by this path.
-        // 常规 Lite B 路径使用 V8 延时序列，而不是 Phat 的 IPC 时序循环。紧随其后
-        // 的保留 IPC 帮助例程为兼容而存在，但此路径不会调用它。
+
         mov r0, #0x280000
         swi SwiArm7WaitByLoopImmediate
         mov r0, #0x0e00
@@ -146,10 +124,6 @@ fp2_wait_e:
     bne fp2_wait_e
     bx r11
 
-    // These auxiliary-card and DMA helpers remain in the V8 prefix for layout
-    // compatibility.  The V8 route selector no longer calls them directly.
-    // 这些辅助卡与 DMA 帮助例程仍保留在 V8 前置区中以维持布局兼容；V8 路径选择器
-    // 不再直接调用它们。
     .org FlashMeFp2RamAddress + Fp2AuxOffset
 fp2_aux_enable:
     ldr r0, [fp2_slot_aux_spi_control]
@@ -253,10 +227,6 @@ fp2_header_copy:
     mov r2, #0x20
     swihi SwiArm7CpuFastSetImmediate
 
-    // Lite executes the two-step SPI setup for every V8 variant.  If the
-    // returned status exposes bit 6, the low field is derived from FH + 0x64.
-    // Lite 会为每个 V8 变体执行两步 SPI 设置。若返回状态具有 bit 6，则低字段
-    // 从 FH + 0x64 派生。
     mov r0, #0x84
     mov r1, #0
     bl fp2_lite_setup
@@ -275,9 +245,6 @@ fp2_copy:
     ldr r3, [fp2_slot_bios_copy]
     bx r3
 
-    // Retained in all V8 Lite variants for the original prefix and pool
-    // layout.  The V8 service route does not call it.
-    // 为保留原始前置区及 pool 布局而在所有 V8 Lite 变体中保留。V8 服务路径不调用它。
 fp2_ipc_send:
     ldr r3, [fp2_slot_bios_ipc_send]
     bx r3
@@ -325,8 +292,7 @@ fp2_slot_bios_boot_return:
     .endarea
 
 fp2_retail:
-    // RetailP2RamAddress = FlashMeFp2RamAddress + FlashMePrefixBytes.
-    // 零售 P2 的运行地址等于 FlashMeFp2RamAddress + FlashMePrefixBytes。
+
     .org RetailP2RamAddress
     .incbin "temp/p2.bin"
 fp2_retail_end:
@@ -334,75 +300,3 @@ fp2_retail_end:
         .error "FlashMe: FP2 overlaps the primary P2 staging window"
     .endif
 .close
-
-// =============================================================================
-// C flow model (English)
-// =============================================================================
-// static bool SelectFlashRoute(void)
-// {
-// #if BUILD_NOAUTO
-//     return (REG_KEYINPUT & (KEY_A | KEY_B)) == 0 &&
-//            (REG_KEYXY & (KEYXY_X | KEYXY_Y)) == 0;
-// #else
-//     if ((REG_KEYINPUT & KEY_SELECT) == 0)
-//         return false;
-//     if ((REG_KEYINPUT & (KEY_A | KEY_B)) == 0 &&
-//         (REG_KEYXY & (KEYXY_X | KEYXY_Y)) == 0)
-//         return true;
-//     const u32 *title = (const u32 *)GbaRomTitleAddress;
-//     return title[3] == 0x53534150 ||       // PASS
-//            (title[0] == 0x6f425344 &&     // DSBo
-//             title[1] == 0x7265746f);      // oter
-// #endif
-// }
-//
-// static __attribute__((noreturn)) void RunFp2V8Lite(bool stealth)
-// {
-//     if (!SelectFlashRoute()) {
-//         REG_IPC_SYNC = 0x0b00;
-//         CopySecondaryHeaderAndPrepareLiteSpi();
-//         if (!stealth) {
-//             swiWaitByLoop(0x280000);
-//             REG_IPC_SYNC = 0x0e00;
-//         }
-//         EnterRetailP2(*(volatile u32 *)Arm9ReturnSlotFp2);
-//     }
-//
-//     REG_IPC_SYNC = 0x0c00;
-//     ClearDma();
-//     CopySecondaryHeaderAndPrepareLiteSpi();
-//     BiosBootReturnRoutine();
-//     SpiWrite(0x8a00, 0x84);
-//     SpiWrite(0x8200, 0x00);
-//     REG_IPC_SYNC = 0x0e00;
-//     while ((REG_IPC_SYNC & 0x0f) != 0x0e) { }
-//     EnterArm7ReturnEntry();
-// }
-
-// =============================================================================
-// C 流程模型（中文）
-// =============================================================================
-// NoAuto 只接受低有效的 A+B+X+Y 组合；其余变体还会将 Select 作为服务路径选择，
-// 并检查 Slot-2 的 DSBooter/PASS 标题。服务路径先发布 B、复制 FH 并准备 Lite SPI；
-// 常规 Lite 随后执行固定延时并发布 E，Stealth 直接进入保留 P2。冷启动路径发布 C、
-// 清除 DMA、复制 FH/准备 SPI、调用 BIOS 返回准备，写入最终两次 SPI 命令，最后在 E
-// 与 FP1 会合。
-
-// =============================================================================
-// Coordination and design analysis (English)
-// =============================================================================
-// FP2 owns ARM7-side second-stage routing and serializes FP1 through B/C/E
-// IPC phases.  Thus FP1 only prepares ARM9 after FP2 has established the cold
-// path.  V8 Lite differs from V8 Phat in two concrete places: its normal B
-// route uses a BIOS loop delay, and every variant runs the observed two-step
-// Lite SPI preparation while copying FH.  The auxiliary, DMA, and unused IPC
-// helper blocks remain byte-for-byte layout members even though current route
-// selection does not invoke all of them.
-
-// =============================================================================
-// 协同与设计解析（中文）
-// =============================================================================
-// FP2 拥有 ARM7 侧的二级路径选择权，并通过 B/C/E IPC 阶段将 FP1 串行化。因此只有 FP2
-// 确定冷路径后，FP1 才会准备 ARM9。V8 Lite 与 V8 Phat 有两项明确差异：常规 B 路径使用
-// BIOS 循环延时，且每个变体都会在复制 FH 时执行观测到的两步 Lite SPI 准备。辅助卡、DMA
-// 与未使用 IPC 帮助块即使当前路径选择并不会全部调用，也仍作为逐字节布局成员保留。

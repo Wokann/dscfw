@@ -1,10 +1,4 @@
-// FlashMe V8a Lite second-stage ARM9 prefix.
-//
-// This local Lite copy precedes retained P1 from official_v6.bin. Its 0x400-byte prefix
-// ends exactly at the V6 retail entry address decoded from temp/h.bin.
-//
-// 本地 Lite 副本位于保留的官方 V6 P1 之前。其 0x400 字节前置区恰好在从 temp/h.bin
-// 解码出的 V6 零售入口处结束。
+
 .create "build/fp1.bin", 0
     .headersize FlashMeFp1RamAddress
     .area FlashMePrefixBytes, 0x00
@@ -27,14 +21,12 @@ fp1_wait_b:
 
 fp1_warm_boot:
     .if BuildStealth
-        // Stealth resumes retained ARM9 immediately after phase B.
-        // Stealth 在 B 阶段后立即恢复保留 ARM9。
+
         ldr lr, [fp1_slot_arm9_return]
         ldr lr, [lr]
         b fp1_retail
     .else
-        // Normal and NoAuto wait for FP2 to publish phase E.
-        // 常规版与 NoAuto 会等待 FP2 发布 E 阶段。
+
         ldr r0, [fp1_slot_powercnt]
         ldr r1, [fp1_slot_arm9_boot_state]
         strh r1, [r0]
@@ -101,8 +93,6 @@ fp1_clear_dma:
     mov r0, #0
     strh r0, [r1]
 
-    // Map LCDC VRAM, clear it, and assign shared WRAM to ARM7.
-    // 映射 LCDC VRAM、清零，并将共享 WRAM 分配给 ARM7。
     ldr r4, [fp1_slot_vram_a_cr]
     ldr r5, [fp1_slot_vram_lcdc_disable_all]
     str r5, [r4]
@@ -141,8 +131,6 @@ fp1_wait_e_cold:
     mov r2, #MM_PALRAM_SZ
     bl fp1_zero_range
 
-    // V8a clears two extra system-control words before phase E.
-    // V8a 会在 E 阶段前额外清除两个系统控制字。
     mov r0, #0x04000000
     mov r1, #0
     str r1, [r0]
@@ -203,13 +191,11 @@ fp1_slot_clear_source:
 
 fp1_retail:
     .org RetailP1RamAddress
-    // RetailP1RamAddress = FlashMeFp1RamAddress + FlashMePrefixBytes.
-    // 零售 P1 的运行地址等于 FlashMeFp1RamAddress + FlashMePrefixBytes。
+
     .incbin "temp/p1.bin"
 
     .if !BuildStealth
-        // Normal and NoAuto alter four Lite retail P1 checks.
-        // 常规版与 NoAuto 会修改四处 Lite 零售 P1 检查。
+
         .org RetailP1RamAddress + RetailP1Patch0Offset
         .thumb
         lsl r3, r4, #0
@@ -227,8 +213,6 @@ fp1_retail:
         lsl r0, r0, #0
     .endif
 
-    // Both normal and Stealth retain these two callback bypasses.
-    // 常规版与 Stealth 均保留这两处回调绕过。
     .org RetailP1RamAddress + RetailP1Callback0Offset
     .thumb
     .dh 0x0000
@@ -237,20 +221,3 @@ fp1_retail:
     .thumb
     .dh 0x0000
 .close
-
-// =============================================================================
-// C flow model (English)
-// =============================================================================
-//
-// FP1 consumes FP2's B/C/E IPC phase.  B returns to retained ARM9 (after an E
-// wait except in Stealth); C clears ARM9-visible state and installs the return
-// trampoline; E completes the cross-CPU rendezvous.  Its prefix remains 0x400
-// bytes, so retained V6 P1 enters at its native address.
-//
-// =============================================================================
-// C 流程模型（中文）
-// =============================================================================
-//
-// FP1 消费 FP2 发布的 B/C/E IPC 阶段。B 恢复保留 ARM9（Stealth 以外会先等待 E）；
-// C 清理 ARM9 可见状态并安装返回跳板；E 完成跨 CPU 会合。前置区固定为 0x400 字节，
-// 因而保留的 V6 P1 仍从原生地址进入。
