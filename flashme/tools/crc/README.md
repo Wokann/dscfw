@@ -26,9 +26,8 @@ flashmecrc crc16-record --image FILE --range-end N --write FILE
 <code>crc32-official</code> calculates CRC-32/ISO-HDLC while virtually
 filling the specified private range with <code>FF</code>; it never modifies
 the source image. <code>crc16-flashme</code> verifies both a rebuilt image and
-its released FlashMe reference with CRC-16/IBM. <code>crc16-record</code> is
-used only when a historical reference does not exist, currently the inferred
-V2 reconstruction.
+its released FlashMe reference with CRC-16/IBM. <code>crc16-record</code>
+writes a standalone CRC-16 record when no reference image is being compared.
 
 ---
 
@@ -41,5 +40,5 @@ V2 reconstruction.
 
 执行 <code>make</code> 即可编译。三种模式分别用于：按私有区虚拟填
 <code>FF</code> 的任天堂固件 CRC-32、已发布 FlashMe 与重建镜像的 CRC-16
-比对，以及没有历史镜像可比对时的单独记录（目前仅推定 V2）。工具不会修改
+比对，以及没有参考镜像可比对时的单独记录。工具不会修改
 参与校验的固件镜像。

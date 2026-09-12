@@ -13,15 +13,19 @@ include tools/flashme-build.mk
 	v8-phat v8-lite v8a-phat v8a-lite
 
 all: verify-official_inputs \
-	v1 v2 v3 v4 v5 v6 \
+	v1 v3 v4 v5 v6 \
 	v7-old-phat v7-old-lite v7-new-phat v7-new-lite \
 	v8-phat v8-lite v8a-phat v8a-lite
 
 v1: verify-official_v3
 	$(MAKE) -C v1 pack
 
-v2: verify-official_v3
-	$(MAKE) -C v2 pack
+# V2 is intentionally a diagnostic guard, not a build target.  Without this
+# explicit rule, GNU make treats the retained v2/ documentation directory as
+# an up-to-date target and reports a misleading success.
+v2:
+	@echo "FlashMe V2 is unavailable: no authenticated image or reliable technical source exists."
+	@exit 1
 
 v3: verify-official_v3
 	$(MAKE) -C v3 pack
