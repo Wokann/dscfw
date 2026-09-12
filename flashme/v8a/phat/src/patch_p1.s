@@ -93,7 +93,7 @@ p1_zero_loop:
     bne p1_zero_loop
     mov pc, lr
 
-    .orga PrimaryP1PoolOffset
+    .org PrimaryP1RamAddress + PrimaryP1PoolOffset
 p1_slot_dma0_sad:
     .dw REG_DMA0SAD
 p1_slot_powercnt:

@@ -1,6 +1,6 @@
 // FlashMe V8a Lite second-stage ARM9 prefix.
 //
-// This local Lite copy precedes retained official V6 P1.  Its 0x400-byte prefix
+// This local Lite copy precedes retained P1 from official_v6.bin. Its 0x400-byte prefix
 // ends exactly at the V6 retail entry address decoded from temp/h.bin.
 //
 // 本地 Lite 副本位于保留的官方 V6 P1 之前。其 0x400 字节前置区恰好在从 temp/h.bin
@@ -50,9 +50,9 @@ fp1_wait_e_warm:
     .endif
 
     .if BuildStealth
-        .orga 0x03c
+        .org FlashMeFp1RamAddress + 0x03c
     .else
-        .orga 0x058
+        .org FlashMeFp1RamAddress + 0x058
     .endif
 fp1_cold_boot:
     bl fp1_cold_prepare
@@ -62,15 +62,15 @@ fp1_cold_boot:
     str r4, [r9]
     bx r4
 
-    .orga Fp1ContextOffset
+    .org FlashMeFp1RamAddress + Fp1ContextOffset
 fp1_context:
 fp1_context_r4:
     .dw Arm9ReturnTrampolineAddress
 
     .headersize Arm9ReturnTrampolineAddress - orga(fp1_context_r4)
-    .orga orga(fp1_context_r4)
+    .org Arm9ReturnTrampolineAddress
 fp1_runtime_trampoline_entry:
-    .orga orga(fp1_context_r4) + 4
+    .org Arm9ReturnTrampolineAddress + 4
 fp1_context_r5:
     mov r0, r0
 fp1_context_r6:
@@ -83,7 +83,7 @@ fp1_context_ipc_phase_e:
 fp1_context_arm9_return:
     .dw Arm9ReturnSlot
 
-    .orga Fp1ColdPrepareOffset
+    .org FlashMeFp1RamAddress + Fp1ColdPrepareOffset
 fp1_cold_prepare:
     mov r11, lr
     mov r0, #0
@@ -163,7 +163,7 @@ fp1_zero_loop:
     bne fp1_zero_loop
     mov pc, lr
 
-    .orga Fp1PoolOffset
+    .org FlashMeFp1RamAddress + Fp1PoolOffset
     .if BuildStealth
 fp1_slot_arm9_unknown_return:
     .dw Arm9UnknownReturnSlot
@@ -202,35 +202,38 @@ fp1_slot_clear_source:
     .endarea
 
 fp1_retail:
+    .org RetailP1RamAddress
+    // RetailP1RamAddress = FlashMeFp1RamAddress + FlashMePrefixBytes.
+    // 零售 P1 的运行地址等于 FlashMeFp1RamAddress + FlashMePrefixBytes。
     .incbin "temp/p1.bin"
 
     .if !BuildStealth
         // Normal and NoAuto alter four Lite retail P1 checks.
         // 常规版与 NoAuto 会修改四处 Lite 零售 P1 检查。
-        .orga FlashMePrefixBytes + RetailP1Patch0Offset
+        .org RetailP1RamAddress + RetailP1Patch0Offset
         .thumb
         lsl r3, r4, #0
 
-        .orga FlashMePrefixBytes + RetailP1Patch1Offset
+        .org RetailP1RamAddress + RetailP1Patch1Offset
         .thumb
         cmp r1, #1
 
-        .orga FlashMePrefixBytes + RetailP1Patch2Offset
+        .org RetailP1RamAddress + RetailP1Patch2Offset
         .thumb
         cmp r0, #1
 
-        .orga FlashMePrefixBytes + RetailP1Patch3Offset
+        .org RetailP1RamAddress + RetailP1Patch3Offset
         .thumb
         lsl r0, r0, #0
     .endif
 
     // Both normal and Stealth retain these two callback bypasses.
     // 常规版与 Stealth 均保留这两处回调绕过。
-    .orga FlashMePrefixBytes + RetailP1Callback0Offset
+    .org RetailP1RamAddress + RetailP1Callback0Offset
     .thumb
     .dh 0x0000
 
-    .orga FlashMePrefixBytes + RetailP1Callback1Offset
+    .org RetailP1RamAddress + RetailP1Callback1Offset
     .thumb
     .dh 0x0000
 .close

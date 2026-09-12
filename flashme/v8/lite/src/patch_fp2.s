@@ -1,7 +1,7 @@
 // Stage 2 ARM7 half for FlashMe V8 Lite.
 //
 // FP2 decides whether to resume the retained service path or begin the
-// FlashMe cold path.  It retains the official V6 P2 body at its original RAM
+// FlashMe cold path. It retains the P2 body from official_v6.bin at its original RAM
 // entry after a 0x400-byte FlashMe prefix.
 // FP2 决定恢复保留的服务路径还是启动 FlashMe 冷路径。它在 0x400 字节的
 // FlashMe 前置区之后，将官方 V6 的 P2 主体保留在原始 RAM 入口。
@@ -73,7 +73,7 @@ fp2_check_boot_state:
         beq fp2_flash_boot
     .endif
 
-    .orga Fp2ServiceOffset
+    .org FlashMeFp2RamAddress + Fp2ServiceOffset
 fp2_service_boot:
     mov r0, #0x0b00
     strh r0, [r10, #0x50]
@@ -113,12 +113,12 @@ fp2_ipc_call:
         ldmia sp!, {pc}
     .endif
 
-    .orga Fp2BootStateOffset
+    .org FlashMeFp2RamAddress + Fp2BootStateOffset
 fp2_boot_state:
     .dw GbaRomTitleAddress
     .ascii "DSBooterPASS"
 
-    .orga Fp2FlashBootOffset
+    .org FlashMeFp2RamAddress + Fp2FlashBootOffset
 fp2_flash_boot:
     mov r0, #0x0c00
     strh r0, [r10, #0x50]
@@ -150,7 +150,7 @@ fp2_wait_e:
     // compatibility.  The V8 route selector no longer calls them directly.
     // 这些辅助卡与 DMA 帮助例程仍保留在 V8 前置区中以维持布局兼容；V8 路径选择器
     // 不再直接调用它们。
-    .orga Fp2AuxOffset
+    .org FlashMeFp2RamAddress + Fp2AuxOffset
 fp2_aux_enable:
     ldr r0, [fp2_slot_aux_spi_control]
     ldr r3, [fp2_slot_aux_spicnt]
@@ -203,7 +203,7 @@ fp2_dma_wait:
     bgt fp2_dma_copy
     bx lr
 
-    .orga Fp2SpiSetupOffset
+    .org FlashMeFp2RamAddress + Fp2SpiSetupOffset
 fp2_lite_setup:
     stmdb sp!, {r1,lr}
     ldr r1, [fp2_slot_lite_spi_initial]
@@ -226,7 +226,7 @@ fp2_lite_spi_wait_read:
     ldrh r1, [r3, #2]
     bx lr
 
-    .orga Fp2ClearDmaOffset
+    .org FlashMeFp2RamAddress + Fp2ClearDmaOffset
 fp2_clear_dma:
     mov r0, #0
     mov r2, #0x2c
@@ -237,7 +237,7 @@ fp2_clear_dma_loop:
     bpl fp2_clear_dma_loop
     bx lr
 
-    .orga Fp2HeaderCopyOffset
+    .org FlashMeFp2RamAddress + Fp2HeaderCopyOffset
 fp2_header_copy:
     stmdb sp!, {lr}
     ldr r0, [fp2_slot_firmware_bytes]
@@ -270,7 +270,7 @@ fp2_header_copy:
 fp2_lite_setup_done:
     ldmia sp!, {pc}
 
-    .orga Fp2CopyOffset
+    .org FlashMeFp2RamAddress + Fp2CopyOffset
 fp2_copy:
     ldr r3, [fp2_slot_bios_copy]
     bx r3
@@ -282,12 +282,12 @@ fp2_ipc_send:
     ldr r3, [fp2_slot_bios_ipc_send]
     bx r3
 
-    .orga Fp2BootReturnOffset
+    .org FlashMeFp2RamAddress + Fp2BootReturnOffset
 fp2_boot_return:
     ldr r3, [fp2_slot_bios_boot_return]
     bx r3
 
-    .orga Fp2PoolOffset
+    .org FlashMeFp2RamAddress + Fp2PoolOffset
 fp2_slot_powercnt:
     .dw REG_POWERCNT
 fp2_slot_keyinput:
@@ -325,6 +325,9 @@ fp2_slot_bios_boot_return:
     .endarea
 
 fp2_retail:
+    // RetailP2RamAddress = FlashMeFp2RamAddress + FlashMePrefixBytes.
+    // 零售 P2 的运行地址等于 FlashMeFp2RamAddress + FlashMePrefixBytes。
+    .org RetailP2RamAddress
     .incbin "temp/p2.bin"
 fp2_retail_end:
     .if fp2_retail_end > PrimaryP2RamAddress

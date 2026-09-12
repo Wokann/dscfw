@@ -121,7 +121,7 @@ p2_copy_boot:
     add r6, #0x14
     b p2_handoff
 
-    .orga PrimaryP2CardTransferOffset
+    .org PrimaryP2RamAddress + PrimaryP2CardTransferOffset
 p2_card_transfer:
     push {r4-r7, lr}
     mov r7, #1
@@ -150,7 +150,7 @@ p2_card_transfer_chunk_ready:
     bhi p2_card_transfer_loop
     pop {r4-r7, pc}
 
-    .orga PrimaryP2BootParametersOffset
+    .org PrimaryP2RamAddress + PrimaryP2BootParametersOffset
 p2_boot_parameters_data:
     .dw FlashMePrimaryHeaderAddress, REG_KEYINPUT
     .ascii "BOOT"
@@ -167,7 +167,7 @@ p2_arm9_trampoline_target:
 p2_arm9_trampoline_primary_p1:
     .dw PrimaryP1RamAddress
 
-    .orga PrimaryP2ServiceOffset
+    .org PrimaryP2RamAddress + PrimaryP2ServiceOffset
 p2_service_boot:
     mov r1, r11
     mov r2, #0x40
@@ -210,7 +210,7 @@ p2_compute_address:
     push {r1}
     bx r5
 
-    .orga PrimaryP2LegacyThunkOffset
+    .org PrimaryP2RamAddress + PrimaryP2LegacyThunkOffset
 p2_legacy_thunk:
     push {r0, lr}
     mov r2, #0
@@ -228,7 +228,7 @@ p2_legacy_thunk:
 p2_legacy_call:
     bx r3
 
-    .orga PrimaryP2LegacyWaitOffset
+    .org PrimaryP2RamAddress + PrimaryP2LegacyWaitOffset
 p2_legacy_wait:
     ldr r1, [p2_slot_spicnt]
 
@@ -240,7 +240,7 @@ p2_legacy_wait_busy:
     strh r0, [r1, #2]
     bx lr
 
-    .orga PrimaryP2LegacyPoolOffset
+    .org PrimaryP2RamAddress + PrimaryP2LegacyPoolOffset
 p2_legacy_pool:
     .dw p2_legacy_thunk + 1, PrimaryP2LegacyCallbackValue, p2_legacy_wait + 1
 
@@ -320,7 +320,7 @@ p2_card_read_skip:
     bcs p2_card_read_wait
     pop {r4, r5, pc}
 
-    .orga PrimaryP2PoolOffset
+    .org PrimaryP2RamAddress + PrimaryP2PoolOffset
 p2_slot_primary_p1_command:
     .dw PrimaryP1CommandAddress
 p2_slot_firmware_bytes:

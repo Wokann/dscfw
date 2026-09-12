@@ -1,0 +1,5 @@
+# Keep the Windows convenience binary under version control.
+!flashmecrc.exe
+
+# Other native outputs are local build products.
+flashmecrc

@@ -1,7 +1,7 @@
 // Stage 2 ARM9 half for FlashMe V8 Phat.
 //
 // Primary P2 has already selected FH and loaded the FP pair.  This file emits
-// the 0x400-byte FlashMe prefix followed by the retained official V3 P1 body.
+// the 0x400-byte FlashMe prefix followed by the retained P1 body from official_v3.bin.
 // The body begins at its original decoded RAM entry, so it keeps every absolute
 // address used by the retail program.
 // 一级 P2 已选择 FH 并加载 FP 组件对。本文件生成 0x400 字节的 FlashMe 前置代码，
@@ -59,9 +59,9 @@ fp1_wait_e_warm:
     .endif
 
     .if BuildStealth
-        .orga 0x03c
+        .org FlashMeFp1RamAddress + 0x03c
     .else
-        .orga 0x058
+        .org FlashMeFp1RamAddress + 0x058
     .endif
 fp1_cold_boot:
     bl fp1_cold_prepare
@@ -76,15 +76,15 @@ fp1_cold_boot:
     // has published phase E.
     // C 路径会消费这份上下文：它在 0x027fff70 写入 ARM9 跳板，并在 FP1 发布 E
     // 阶段后继续保留的 ARM9 续接。
-    .orga Fp1ContextOffset
+    .org FlashMeFp1RamAddress + Fp1ContextOffset
 fp1_context:
 fp1_context_r4:
     .dw Arm9ReturnTrampolineAddress
 
     .headersize Arm9ReturnTrampolineAddress - orga(fp1_context_r4)
-    .orga orga(fp1_context_r4)
+    .org Arm9ReturnTrampolineAddress
 fp1_runtime_trampoline_entry:
-    .orga orga(fp1_context_r4) + 4
+    .org Arm9ReturnTrampolineAddress + 4
 fp1_context_r5:
     mov r0, r0
 fp1_context_r6:
@@ -97,7 +97,7 @@ fp1_context_ipc_phase_e:
 fp1_context_arm9_return:
     .dw Arm9ReturnSlot
 
-    .orga Fp1ColdPrepareOffset
+    .org FlashMeFp1RamAddress + Fp1ColdPrepareOffset
 fp1_cold_prepare:
     mov r11, lr
     mov r0, #0
@@ -171,7 +171,7 @@ fp1_zero_loop:
 
     // Keep the literal table at the original V8 offsets and order.
     // 将字面量表固定在原始 V8 偏移和顺序。
-    .orga Fp1PoolOffset
+    .org FlashMeFp1RamAddress + Fp1PoolOffset
     .if BuildStealth
 fp1_slot_arm9_unknown_return:
     .dw Arm9UnknownReturnSlot
@@ -210,25 +210,28 @@ fp1_slot_clear_source:
     .endarea
 
 fp1_retail:
+    .org RetailP1RamAddress
+    // RetailP1RamAddress = FlashMeFp1RamAddress + FlashMePrefixBytes.
+    // 零售 P1 的运行地址等于 FlashMeFp1RamAddress + FlashMePrefixBytes。
     .incbin "temp/p1.bin"
 
     .if !BuildStealth
         // Normal V8 patches four retail P1 checks before the two shared
         // callback bypasses below.
         // 常规版 V8 会先修改四处零售 P1 检查，再应用下方两个共享回调绕过。
-        .orga FlashMePrefixBytes + 0x2dc
+        .org RetailP1RamAddress + 0x2dc
         .thumb
         lsl r3, r4, #0
 
-        .orga FlashMePrefixBytes + 0x89e
+        .org RetailP1RamAddress + 0x89e
         .thumb
         cmp r1, #1
 
-        .orga FlashMePrefixBytes + 0x8ba
+        .org RetailP1RamAddress + 0x8ba
         .thumb
         cmp r0, #1
 
-        .orga FlashMePrefixBytes + 0x8ce
+        .org RetailP1RamAddress + 0x8ce
         .thumb
         lsl r0, r0, #0
     .endif
@@ -237,11 +240,11 @@ fp1_retail:
     // fall through.  The zero Thumb halfword is the historical patch encoding.
     // V8 的常规/Stealth 两种状态都会强制两处零售回调分支顺序落下；零 Thumb 半字是
     // 历史补丁编码。
-    .orga FlashMePrefixBytes + 0x6de6
+    .org RetailP1RamAddress + 0x6de6
     .thumb
     .dh 0x0000
 
-    .orga FlashMePrefixBytes + 0x6e3c
+    .org RetailP1RamAddress + 0x6e3c
     .thumb
     .dh 0x0000
 .close

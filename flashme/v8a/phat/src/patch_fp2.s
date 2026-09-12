@@ -64,7 +64,7 @@ fp2_check_boot_state:
         beq fp2_flash_boot
     .endif
 
-    .orga Fp2ServiceOffset
+    .org FlashMeFp2RamAddress + Fp2ServiceOffset
 fp2_service_boot:
     mov r0, #0x0b00
     strh r0, [r10, #0x50]
@@ -110,12 +110,12 @@ fp2_ipc_call:
         ldmia sp!, {pc}
     .endif
 
-    .orga Fp2BootStateOffset
+    .org FlashMeFp2RamAddress + Fp2BootStateOffset
 fp2_boot_state:
     .dw GbaRomTitleAddress
     .ascii "DSBooterPASS"
 
-    .orga Fp2FlashBootOffset
+    .org FlashMeFp2RamAddress + Fp2FlashBootOffset
 fp2_flash_boot:
     mov r0, #0x0c00
     strh r0, [r10, #0x50]
@@ -146,7 +146,7 @@ fp2_wait_e:
 
     // Retained auxiliary-card / DMA helpers preserve the official V8a layout.
     // 保留辅助卡 / DMA 帮助例程以维持官方 V8a 布局。
-    .orga Fp2AuxOffset
+    .org FlashMeFp2RamAddress + Fp2AuxOffset
 fp2_aux_enable:
     ldr r0, [fp2_slot_aux_spi_control]
     ldr r3, [fp2_slot_aux_spicnt]
@@ -199,7 +199,7 @@ fp2_dma_wait:
     bgt fp2_dma_copy
     bx lr
 
-    .orga Fp2SpiSetupOffset
+    .org FlashMeFp2RamAddress + Fp2SpiSetupOffset
 fp2_spi_setup:
     stmdb sp!, {r1,lr}
     ldr r1, [fp2_slot_phat_spi_initial]
@@ -222,7 +222,7 @@ fp2_spi_wait_read:
     ldrh r1, [r3, #2]
     bx lr
 
-    .orga Fp2ClearDmaOffset
+    .org FlashMeFp2RamAddress + Fp2ClearDmaOffset
 fp2_clear_dma:
     mov r0, #0
     mov r2, #0x2c
@@ -233,7 +233,7 @@ fp2_clear_dma_loop:
     bpl fp2_clear_dma_loop
     bx lr
 
-    .orga Fp2HeaderCopyOffset
+    .org FlashMeFp2RamAddress + Fp2HeaderCopyOffset
 fp2_header_copy:
     stmdb sp!, {lr}
     ldr r0, [fp2_slot_firmware_bytes]
@@ -250,7 +250,7 @@ fp2_header_copy:
     swihi SwiArm7CpuFastSetImmediate
     ldmia sp!, {pc}
 
-    .orga Fp2CopyOffset
+    .org FlashMeFp2RamAddress + Fp2CopyOffset
 fp2_copy:
     ldr r3, [fp2_slot_bios_copy]
     bx r3
@@ -259,12 +259,12 @@ fp2_ipc_send:
     ldr r3, [fp2_slot_bios_ipc_send]
     bx r3
 
-    .orga Fp2BootReturnOffset
+    .org FlashMeFp2RamAddress + Fp2BootReturnOffset
 fp2_boot_return:
     ldr r3, [fp2_slot_bios_boot_return]
     bx r3
 
-    .orga Fp2PoolOffset
+    .org FlashMeFp2RamAddress + Fp2PoolOffset
 fp2_slot_powercnt:
     .dw REG_POWERCNT
 fp2_slot_keyinput:
@@ -302,6 +302,9 @@ fp2_slot_bios_boot_return:
     .endarea
 
 fp2_retail:
+    // RetailP2RamAddress = FlashMeFp2RamAddress + FlashMePrefixBytes.
+    // 零售 P2 的运行地址等于 FlashMeFp2RamAddress + FlashMePrefixBytes。
+    .org RetailP2RamAddress
     .incbin "temp/p2.bin"
 .close
 

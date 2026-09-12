@@ -47,7 +47,7 @@ p2_swi:
     mov r0, #0
     bx r3
 
-    .orga 0x3a
+    .org PrimaryP2RamAddress + 0x3a
 p2_boot_parameters:
     // The first six words are loaded by p2_thumb: FH image address, key input,
     // the Slot-2 marker, the ARM7 BIOS reader, the Thumb LZ77 entry, and the
@@ -77,7 +77,7 @@ p2_arm9_trampoline_return_slot:
 p2_arm9_trampoline_primary_p1:
     .dw PrimaryP1RamAddress
 
-    .orga 0x68
+    .org PrimaryP2RamAddress + 0x68
 p2_service_boot:
     // FH component route.  r11 retains the header work pointer received in r12;
     // the BIOS reader overlays its leading fields with the secondary FH data.
@@ -128,7 +128,7 @@ p2_compute_address:
     push {r1}
     bx r5
 
-    .orga 0xb2
+    .org PrimaryP2RamAddress + 0xb2
 // Thumb-1 ABI bridge used inside the inherited BIOS/LZ77 serial-read path.  It
 // serves that path's SPI transfer callback; it is not a separate boot stage.
 // 这是继承的 BIOS/LZ77 串行读取路径内部使用的 Thumb-1 ABI 桥接。它提供该路径所需
@@ -163,7 +163,7 @@ p2_legacy_poll:
     strh r0, [r1, #2]
     bx lr
 
-    .orga 0xe0
+    .org PrimaryP2RamAddress + 0xe0
 // This three-word callback table is the named ADR target in
 // p2_compute_address.
 // It precedes the slots in the original V1 image; omitting it moves every

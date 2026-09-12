@@ -4,8 +4,8 @@
 // Whole-program boot model (English)
 // =============================================================================
 //
-// This project starts with official Nintendo DS firmware V3.  It is the Phat
-// base rule for this patch family; Lite projects start with official V6 instead.
+// This project starts with official_v3.bin. It is the Phat base rule for this
+// patch family; Lite projects start with official_v6.bin instead.
 // A FlashMe template is used only as a comparison target, never as a build input.
 //
 // The DS firmware loader starts H:P1 on ARM9 and H:P2 on ARM7 concurrently.
@@ -17,8 +17,8 @@
 //                                  |
 //                                  v
 //     FH (secondary header at image + 0x3F680)
-//       ARM9 FP1: V7 prefix + retained official V3 P1
-//       ARM7 FP2: V7 prefix + retained official V3 P2
+//       ARM9 FP1: V7 prefix + retained P1 from official_v3.bin
+//       ARM7 FP2: V7 prefix + retained P2 from official_v3.bin
 //
 // P1 begins with an LDR/BX loop whose mutable word initially points to P1
 // itself.  P2 either follows the inherited service path or loads the FH pair,
@@ -49,7 +49,7 @@
 // 完整程序引导模型（中文）
 // =============================================================================
 //
-// 本工程以官方 Nintendo DS V3 固件为起点。这是本补丁族的 Phat 母版规则；Lite 工程
+// 本工程以 official_v3.bin 为起点。这是本补丁族的 Phat 母版规则；Lite 工程
 // 则以官方 V6 为起点。FlashMe 模板只作为比对目标，绝不作为构建输入。
 //
 // DS 固件加载器会并行启动 H:P1（ARM9）与 H:P2（ARM7）。FlashMe 将这一对初始组件

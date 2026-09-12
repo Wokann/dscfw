@@ -1,4 +1,4 @@
-// FlashMe V6 Phat target symbols.
+// FlashMe V6 target symbols.
 //
 // This file deliberately separates immutable Nintendo DS addresses from the
 // values chosen by this FlashMe build.  Change only the final section when
@@ -115,11 +115,11 @@
 .definelabel FirmwarePart1RamaddrBase,      0x02800000
 .definelabel FirmwarePart2RamaddrBase,      0x03810000
 
-// V6 Phat keeps the official V3 code bodies but changes the output descriptor
+// V6 keeps code bodies from official_v3.bin but changes the output descriptor
 // units to 0x0C71.  This controls the 8-byte component alignment and the RAM
 // address fields of both H and FH; it is intentionally distinct from the
 // source-H value used to decode retained retail entry addresses.
-// V6 Phat 会保留官方 V3 的代码主体，但把输出描述符单位改为 0x0C71。它控制 H/FH
+// V6 会保留官方 V3 的代码主体，但把输出描述符单位改为 0x0C71。它控制 H/FH
 // 的 8 字节组件对齐与 RAM 地址字段，并有意与用于解码保留零售入口的源 H 数值区分。
 .definelabel ShiftAmountsFlashMe,           0x0c71
 .definelabel ShiftAmountsOriginal,          -1
@@ -138,6 +138,11 @@
 .expfunc Part2RamFromSourceField(field), FirmwarePart2RamaddrBase - ((field) << (2 + ((SourceShiftAmounts >> 9) & 7)))
 .definelabel RetailP1RamAddress,            Part1RamFromSourceField(readu16("temp/h.bin", HeaderPart1RamaddrOffset))
 .definelabel RetailP2RamAddress,            Part2RamFromSourceField(readu16("temp/h.bin", HeaderPart2RamaddrOffset))
+// Nintendo official V3/V6 P3 executes with this component base; embedded
+// absolute pointers resolve as this address plus their raw P3 offsets.
+// 任天堂官方 V3/V6 的 P3 以此组件基址运行；其嵌入的绝对指针会解析为此地址加上
+// 原始 P3 组件偏移。
+.definelabel RetailP3RamAddress,            0x02380000
 
 // -----------------------------------------------------------------------------
 // FlashMe target layout and identity (patch-defined; change when porting)
@@ -154,7 +159,7 @@
 .definelabel FlashMePrefixBytes,            0x200
 
 // BuildStealth is supplied by the V6 Makefile: zero selects the normal build,
-// one selects Stealth.  Both variants retain the same official V3 bodies and
+// one selects Stealth.  Both variants retain the same official_v3.bin bodies and
 // runtime component layout; only their FlashMe-owned prefix policy differs.
 // BuildStealth 由 V6 Makefile 传入：零为常规版，一为 Stealth。两种变体保留相同的
 // 官方 V3 主体与运行时组件布局；只有 FlashMe 自有前置代码的策略不同。

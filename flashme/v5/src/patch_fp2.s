@@ -103,7 +103,7 @@ fp2_ipc_call:
     ldmia sp!, {pc}
     .endif
 
-    .orga Fp2BootStateOffset
+    .org FlashMeFp2RamAddress + Fp2BootStateOffset
 fp2_boot_state:
     .dw GbaRomTitleAddress
 fp2_boot_signature:
@@ -199,6 +199,9 @@ fp2_slot_bios_ipc_send:
     .endarea
 
 fp2_retail:
+    // RetailP2RamAddress = FlashMeFp2RamAddress + FlashMePrefixBytes.
+    // 零售 P2 的运行地址等于 FlashMeFp2RamAddress + FlashMePrefixBytes。
+    .org RetailP2RamAddress
     // This .incbin begins at output +0x200, so fp2_retail is exactly the retail
     // P2 entry address.  The retained body can keep all of its original address
     // assumptions; the prefix was added before it rather than relocating it.

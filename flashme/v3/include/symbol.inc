@@ -135,6 +135,11 @@
 .expfunc Part2RamFromSourceField(field), FirmwarePart2RamaddrBase - ((field) << (2 + ((SourceShiftAmounts >> 9) & 7)))
 .definelabel RetailP1RamAddress,            Part1RamFromSourceField(readu16("temp/h.bin", HeaderPart1RamaddrOffset))
 .definelabel RetailP2RamAddress,            Part2RamFromSourceField(readu16("temp/h.bin", HeaderPart2RamaddrOffset))
+// Nintendo official V3/V6 P3 executes with this component base; embedded
+// absolute pointers resolve as this address plus their raw P3 offsets.
+// 任天堂官方 V3/V6 的 P3 以此组件基址运行；其嵌入的绝对指针会解析为此地址加上
+// 原始 P3 组件偏移。
+.definelabel RetailP3RamAddress,            0x02380000
 
 // -----------------------------------------------------------------------------
 // FlashMe target layout and identity (patch-defined; change when porting)

@@ -1,8 +1,8 @@
-// Stage 2 ARM9 half for FlashMe V6 Phat.  Primary P2 has already loaded the
+// Stage 2 ARM9 half for FlashMe V6.  Primary P2 has already loaded the
 // FH-described FP pair.  The first 0x200 bytes below are FlashMe code; the
-// retained official V3 P1 body begins immediately afterwards at its original
+// retained P1 body from official_v3.bin begins immediately afterwards at its original
 // RAM entry.  main.s describes the two-CPU sequence as one program.
-// FlashMe V6 Phat 的第二阶段 ARM9 部分。一级 P2 已加载 FH 所描述的 FP 组件对。
+// FlashMe V6 的第二阶段 ARM9 部分。一级 P2 已加载 FH 所描述的 FP 组件对。
 // 下方前 0x200 字节是 FlashMe 代码；随后立即接入保留的官方 V3 P1 主体，并使其
 // 从原有 RAM 入口开始执行。main.s 将双 CPU 时序作为一套程序说明。
 .create "build/fp1.bin", 0
@@ -144,7 +144,7 @@ fp1_zero_loop:
     bne fp1_zero_loop
     mov pc, lr
 
-    .orga Fp1ContextOffset
+    .org FlashMeFp1RamAddress + Fp1ContextOffset
 fp1_context:
     // Loaded into r4-r9 by the final hand-off above.
     // 由上方最终交接载入 r4-r9。
@@ -157,9 +157,9 @@ fp1_context_r4:
 // 这两个字会由 r4-r9 交接复制到 Arm9ReturnTrampolineAddress。仅重映射该输出范围，
 // 使历史 ARM 指令直接汇编，而不是保留为原始指令字。
     .headersize Arm9ReturnTrampolineAddress - orga(fp1_context_r4)
-    .orga orga(fp1_context_r4)
+    .org Arm9ReturnTrampolineAddress
 fp1_runtime_trampoline_entry:
-    .orga orga(fp1_context_r4) + 4
+    .org Arm9ReturnTrampolineAddress + 4
 fp1_context_r5:
     strh r8, [r7]
 fp1_context_r6:
@@ -204,6 +204,9 @@ fp1_slot_arm9_boot_state:
     .endarea
 
 fp1_retail:
+    .org RetailP1RamAddress
+    // RetailP1RamAddress = FlashMeFp1RamAddress + FlashMePrefixBytes.
+    // 零售 P1 的运行地址等于 FlashMeFp1RamAddress + FlashMePrefixBytes。
     // The source P1 begins at output +0x200, which is exactly its source-H
     // runtime entry.  It can therefore retain all absolute address assumptions.
     // 源 P1 从输出 +0x200 开始，恰好位于源 H 所描述的运行入口，因此可保留全部
@@ -215,19 +218,19 @@ fp1_retail:
     // the two callback-force edits shared with Stealth below.
     // 常规 V6 会先在保留的 V3 P1 主体中应用四处 Thumb 修改，随后再应用下方与
     // Stealth 共用的两处强制回调修改。
-    .orga FlashMePrefixBytes + 0x2dc
+    .org RetailP1RamAddress + 0x2dc
     .thumb
     lsl r3, r4, #0
 
-    .orga FlashMePrefixBytes + 0x89e
+    .org RetailP1RamAddress + 0x89e
     .thumb
     cmp r1, #1
 
-    .orga FlashMePrefixBytes + 0x8ba
+    .org RetailP1RamAddress + 0x8ba
     .thumb
     cmp r0, #1
 
-    .orga FlashMePrefixBytes + 0x8ce
+    .org RetailP1RamAddress + 0x8ce
     .thumb
     lsl r0, r0, #0
     .endif
@@ -235,11 +238,11 @@ fp1_retail:
     // Both V6 variants replace two conditional callback branches with the
     // Thumb zero halfword, forcing their fall-through paths.
     // 两个 V6 变体都会以 Thumb 零半字替换两处条件回调分支，从而强制走顺序落下路径。
-    .orga FlashMePrefixBytes + 0x6de6
+    .org RetailP1RamAddress + 0x6de6
     .thumb
     .dh 0x0000
 
-    .orga FlashMePrefixBytes + 0x6e3c
+    .org RetailP1RamAddress + 0x6e3c
     .thumb
     .dh 0x0000
 .close

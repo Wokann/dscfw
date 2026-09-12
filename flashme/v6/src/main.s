@@ -1,4 +1,4 @@
-// FlashMe V6 Phat patch entry point.
+// FlashMe V6 patch entry point.
 //
 // =============================================================================
 // Whole-program boot map (English)
@@ -6,7 +6,7 @@
 //
 // This is a dual-CPU NDS boot program, not one linear sequence of C calls.
 // The Phat rule for this project family is explicit: the retained code bodies
-// and starting header are always official V3.  A Lite project uses official V6
+// and starting header always come from official_v3.bin. A Lite project uses official_v6.bin
 // instead; a FlashMe template is never treated as the source firmware.
 // The retail boot environment starts the ARM9 and ARM7 components named by a
 // firmware header independently.  FlashMe deliberately turns that into two

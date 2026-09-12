@@ -98,7 +98,7 @@ fp1_zero_loop:
     bne fp1_zero_loop
     mov pc, lr
 
-    .orga 0x108
+    .org FlashMeFp1RamAddress + 0x108
 fp1_context:
     // Restored into r0-r11; r4-r7 become the installed ARM trampoline.
 fp1_context_r0:
@@ -118,9 +118,9 @@ fp1_context_r4:
 // 这三个字会由 r0-r11 交接复制到 Arm9ReturnSlotNext。仅将此输出范围重映射到其
 // 运行时位置，使真实助记符可从命名槽推导跳板的向后 LDR 目标。
     .headersize Arm9ReturnSlot - orga(fp1_context_r4)
-    .orga orga(fp1_context_r4)
+    .org Arm9ReturnSlot
 fp1_runtime_loop_slot:
-    .orga orga(fp1_context_r4) + 4
+    .org Arm9ReturnSlot + 4
 fp1_context_r5:
     strh r10, [r9]
 fp1_context_r6:
@@ -154,6 +154,9 @@ fp1_slot_vram_lcdc_enable_abcd:
     .endarea
 
 fp1_retail:
+    .org RetailP1RamAddress
+    // RetailP1RamAddress = FlashMeFp1RamAddress + FlashMePrefixBytes.
+    // 零售 P1 的运行地址等于 FlashMeFp1RamAddress + FlashMePrefixBytes。
     // This .incbin begins at output +0x200, so fp1_retail is exactly the retail
     // P1 entry address.  The retained body can therefore keep its original
     // absolute addresses; the prefix did not relocate it.
@@ -168,7 +171,7 @@ fp1_retail:
     // 中文：+0x2DC 是零售状态 0 跳转表中的有符号半字，并非会执行的 Thumb 代码。
     // V3 将其从 0x0017（已有 +0x0AAC 处理程序）改为 0x0023（已有 +0x0884
     // 处理程序），从而重定向初始状态，不会搬移任一处理程序或其跳转表。
-    .orga FlashMePrefixBytes + 0x2dc
+    .org RetailP1RamAddress + 0x2dc
     .dh 0x0023
 
     // English: The retail counter gates at +0x89E and +0x8BA originally test
@@ -176,11 +179,11 @@ fp1_retail:
     // path after its first qualifying iteration rather than the sixteenth.
     // 中文：零售代码 +0x89E 与 +0x8BA 的计数器门槛原本测试 0x0F。V3 将两个
     // 限制都改为 1，因此相关初始化路径会在第一次符合条件的迭代后进入，而非第十六次。
-    .orga FlashMePrefixBytes + 0x89e
+    .org RetailP1RamAddress + 0x89e
     .thumb
     cmp r1, #1
 
-    .orga FlashMePrefixBytes + 0x8ba
+    .org RetailP1RamAddress + 0x8ba
     .thumb
     cmp r0, #1
 
@@ -189,34 +192,39 @@ fp1_retail:
     // no-operation (`lsl r0, r0, #0`), so execution falls through that block.
     // 中文：零售 P1 +0x8CE 原有的无条件跳转会越过随后的状态处理块。这里写入
     // 精确的零值 Thumb 半字，即无操作 `lsl r0, r0, #0`，使执行流落入该代码块。
-    .orga FlashMePrefixBytes + 0x8ce
+    .org RetailP1RamAddress + 0x8ce
     .thumb
     lsl r0, r0, #0
 
     // English: FP1 has a 0x200-byte prefix, so this output offset corresponds
-    // to retail P1 +0x6DE6.  Retail code compares r4 with a 16-bit reference
-    // and uses `bne` to select an alternate callback at +0x6DF6.  Writing the
-    // Thumb halfword 0x0000 removes that conditional branch, always selecting
-    // the fall-through callback path instead.  The checked value's high-level
-    // identity is intentionally left unnamed until the surrounding routine is
-    // fully recovered.
-    // 中文：FP1 含有 0x200 字节前置代码，因此该输出偏移对应零售 P1 +0x6DE6。
-    // 零售代码会将 r4 与一个 16 位参考值比较，并用 `bne` 选择 +0x6DF6 的另一回调。
-    // 写入 Thumb 半字 0x0000 会移除该条件跳转，始终改走顺序落下的回调路径。被检查值
-    // 的高层含义会在完整恢复周边例程前刻意不作命名。
-    .orga FlashMePrefixBytes + 0x6de6
+    // to Nintendo original V3 P1 +0x6DE6. The retained routine decompresses
+    // two regions, chains them through BIOS SWI 0x0E (CRC16), and compares the
+    // result with the expected 16-bit CRC. Its original `bne` selects the
+    // mismatch notification (0x408); replacing it with the zero Thumb NOP
+    // makes both outcomes follow the valid-CRC notification (0x400). This
+    // bypasses the first retained-body CRC16 integrity gate so the altered
+    // component chain can continue booting.
+    // 中文：FP1 含有 0x200 字节前置代码，因此该输出偏移对应任天堂原始 V3 P1
+    // +0x6DE6。保留例程先解压两段数据，再依次经 BIOS SWI 0x0E（CRC16）计算，
+    // 并与预期的 16 位 CRC 比较。原来的 `bne` 会选择失配通知（0x408）；替换为零值
+    // Thumb NOP 后，无论结果如何都会进入有效 CRC 通知（0x400）。这会绕过第一个保留
+    // 主体 CRC16 完整性门，使已改写的组件链能够继续启动。
+    .org RetailP1RamAddress + 0x6de6
     .thumb
     lsl r0, r0, #0
 
-    // English: This output offset maps to retail P1 +0x6E3C.  Retail code uses
-    // `bne` to skip a callback when r4 differs from a second 16-bit reference.
-    // Replacing the branch with 0x0000 makes the callback run for both equality
-    // and inequality.  It therefore forces the post-comparison action without
-    // claiming a semantic name for the still-unrecovered reference value.
-    // 中文：该输出偏移对应零售 P1 +0x6E3C。零售代码在 r4 与第二个 16 位参考值不等时
-    // 使用 `bne` 跳过一个回调。将该跳转替换为 0x0000 后，无论相等与否都会执行回调。
-    // 因而它强制执行比较后的动作，同时不会在尚未完全恢复前臆测该参考值的语义名称。
-    .orga FlashMePrefixBytes + 0x6e3c
+    // English: This output offset maps to Nintendo original V3 P1 +0x6E3C.
+    // Its retained routine decompresses a region, calculates CRC16 through BIOS
+    // SWI 0x0E, and normally uses `bne` to skip a boot-state notification when
+    // that CRC does not match its expected 16-bit value. Replacing the branch
+    // with the zero Thumb NOP makes the notification run for both outcomes.
+    // It removes a second CRC16-dependent integrity gate; the parent dispatcher
+    // still determines the specific later boot-state action.
+    // 中文：该输出偏移对应任天堂原始 V3 P1 +0x6E3C。其保留例程会先解压一段数据，
+    // 再经 BIOS SWI 0x0E 计算 CRC16；原来仅当该 CRC 与预期 16 位值相等时才会避开
+    // `bne` 并执行启动状态通知。替换为零值 Thumb NOP 后，CRC 相等或不等都会执行该
+    // 通知。这移除了第二个依赖 CRC16 的完整性门；其后的具体启动状态仍由上层分派器决定。
+    .org RetailP1RamAddress + 0x6e3c
     .thumb
     lsl r0, r0, #0
 .close

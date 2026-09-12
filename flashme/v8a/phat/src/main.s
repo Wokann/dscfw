@@ -1,6 +1,6 @@
 // FlashMe V8a Phat reconstruction entry point.
 //
-// Build flow: an official V3 image is unpacked into plaintext temp/, armips
+// Build flow: official_v3.bin is unpacked into plaintext temp/, armips
 // recreates only the changed components in build/, then dsfwtool recalculates
 // component descriptors and assembles the FlashMe image.  No FlashMe template
 // is read during this build.
@@ -10,7 +10,7 @@
 //
 // H starts the Phat P1/P2 pair.  P2 owns the first-stage route and command word;
 // FH describes the Phat FP1 and FP2 pair, each followed by retained
-// official V3 bodies.  P3 bypasses the later signature/hash checks; P4/P5 are
+// bodies from official_v3.bin. P3 bypasses the later signature/hash checks; P4/P5 are
 // preserved retail components.
 //
 // H 启动 Phat P1/P2 对。P2 掌握一级路径和命令字；FH 描述 Phat FP1 与 FP2，

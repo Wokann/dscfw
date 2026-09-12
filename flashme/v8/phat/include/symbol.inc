@@ -118,7 +118,7 @@
 .definelabel FirmwarePart1RamaddrBase,      0x02800000
 .definelabel FirmwarePart2RamaddrBase,      0x03810000
 
-// V8 Phat keeps the official V3 code bodies and uses output descriptor
+// V8 Phat keeps code bodies from official_v3.bin and uses output descriptor
 // units to 0x0C71.  This controls the 8-byte component alignment and the RAM
 // address fields of both H and FH; it is intentionally distinct from the
 // source-H value used to decode retained retail entry addresses.
@@ -141,6 +141,11 @@
 .expfunc Part2RamFromSourceField(field), FirmwarePart2RamaddrBase - ((field) << (2 + ((SourceShiftAmounts >> 9) & 7)))
 .definelabel RetailP1RamAddress,            Part1RamFromSourceField(readu16("temp/h.bin", HeaderPart1RamaddrOffset))
 .definelabel RetailP2RamAddress,            Part2RamFromSourceField(readu16("temp/h.bin", HeaderPart2RamaddrOffset))
+// Nintendo official V3/V6 P3 executes with this component base; embedded
+// absolute pointers resolve as this address plus their raw P3 offsets.
+// 任天堂官方 V3/V6 的 P3 以此组件基址运行；其嵌入的绝对指针会解析为此地址加上
+// 原始 P3 组件偏移。
+.definelabel RetailP3RamAddress,            0x02380000
 
 // -----------------------------------------------------------------------------
 // FlashMe target layout and identity (patch-defined; change when porting)
@@ -158,7 +163,7 @@
 
 // BuildStealth and BuildNoAuto are supplied by the V8 Makefile.  Together they
 // select Normal, Stealth, NoAuto, or Stealth-NoAuto while retaining the same
-// official V3 bodies and runtime component layout.
+// official_v3.bin bodies and runtime component layout.
 // BuildStealth 与 BuildNoAuto 由 V8 Makefile 传入。二者共同选择常规、Stealth、
 // NoAuto 或 Stealth-NoAuto，并保留相同的官方 V3 主体与运行时组件布局。
 

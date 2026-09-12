@@ -1,4 +1,4 @@
-// Primary FlashMe descriptor based on the official V3 header.
+// Primary FlashMe descriptor based on the header from official_v3.bin.
 // 一级 FlashMe 描述符，以官方 V3 头为基础。
 .create "build/h.bin", 0
     .incbin "temp/h.bin"

@@ -1,7 +1,7 @@
 // Stage 2 ARM7 half for FlashMe V7 Old Lite Beta.
 //
 // FP2 is the route producer for FP1.  It detects the service/FlashMe route,
-// publishes B/C/E through IPC_SYNC, and leaves the retained official V6 P2
+// publishes B/C/E through IPC_SYNC, and leaves the retained P2 from official_v6.bin
 // body at its original RAM entry after a 0x400-byte FlashMe prefix.
 // FP2 是 FP1 的路径生产端：它检测服务/FlashMe 路径，经由 IPC_SYNC 发布 B/C/E，
 // 并在 0x400 字节 FlashMe 前置代码后将保留的官方 V6 P2 主体留在原 RAM 入口。
@@ -155,7 +155,7 @@ fp2_ipc_call:
     // to the table rather than to a fixed absolute address.
     // 常规与 Stealth 路径有意为这张紧凑标题表使用不同偏移。源码标签使各分支与表绑定，
     // 而非绑定到固定绝对地址。
-    .orga Fp2BootStateOffset
+    .org FlashMeFp2RamAddress + Fp2BootStateOffset
 fp2_boot_state:
     .dw GbaRomTitleAddress
     .ascii "DSBooterPASS"
@@ -216,9 +216,9 @@ fp2_wait_e:
     bx r11
 
     .if BuildStealth
-        .orga 0x1f4
+        .org FlashMeFp2RamAddress + 0x1f4
     .else
-        .orga 0x258
+        .org FlashMeFp2RamAddress + 0x258
     .endif
 fp2_aux_enable:
     ldr r0, [fp2_slot_aux_spi_control]
@@ -273,9 +273,9 @@ fp2_dma_wait:
     bx lr
 
     .if BuildStealth
-        .orga 0x29c
+        .org FlashMeFp2RamAddress + 0x29c
     .else
-        .orga 0x300
+        .org FlashMeFp2RamAddress + 0x300
     .endif
 fp2_lite_setup:
     stmdb sp!, {r1,lr}
@@ -325,9 +325,9 @@ fp2_boot_return:
     // Keep it at the observed variant-specific offset.
     // 原二进制的字面量池是可执行布局的一部分。将其保留在观察到的按变体区分的偏移。
     .if BuildStealth
-        .orga 0x314
+        .org FlashMeFp2RamAddress + 0x314
     .else
-        .orga 0x378
+        .org FlashMeFp2RamAddress + 0x378
     .endif
 fp2_slot_powercnt:
     .dw REG_POWERCNT
@@ -368,6 +368,9 @@ fp2_slot_bios_boot_return:
     .endarea
 
 fp2_retail:
+    // RetailP2RamAddress = FlashMeFp2RamAddress + FlashMePrefixBytes.
+    // 零售 P2 的运行地址等于 FlashMeFp2RamAddress + FlashMePrefixBytes。
+    .org RetailP2RamAddress
     .incbin "temp/p2.bin"
 fp2_retail_end:
     .if fp2_retail_end > PrimaryP2RamAddress
