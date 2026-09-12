@@ -12,7 +12,7 @@
     .dh Part2RamaddrFromRam(FlashMeFp2RamAddress)
 
     .orga HeaderTypeOffset
-    .dh FlashMeTypeId
+    .dh SecondaryHeaderInstallerCode
 
     .orga HeaderOriginalVersionOffset
     .dh 0xffff

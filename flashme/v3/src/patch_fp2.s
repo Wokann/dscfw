@@ -1,3 +1,5 @@
+; FlashMe boot7 / FP2: ARM7 secondary boot component.
+; FlashMe boot7 / FP2：ARM7 次级启动组件。
 
 .create "build/fp2.bin", 0
     .headersize FlashMeFp2RamAddress
@@ -8,12 +10,12 @@
     strh r1, [r0]
 
     mov r1, #0x3000
-    swi SwiArm7SoundBiasImmediate
+    swi SwiSoundBias
     ldr r10, [fp2_slot_keyinput]
     ldrh r0, [r10]
 
     tst r0, #KEY_SELECT
-    beq fp2_service_boot
+    beq fp2_retail_boot
 
     ands r0, r0, #(KEY_A | KEY_B)
     bne fp2_check_boot_state
@@ -32,11 +34,11 @@ fp2_check_boot_state:
     beq fp2_flash_boot
 
     cmp r6, r2
-    bne fp2_service_boot
+    bne fp2_retail_boot
     cmp r7, r3
     beq fp2_flash_boot
 
-fp2_service_boot:
+fp2_retail_boot:
 
     mov r0, #0x0b00
     strh r0, [r10, #0x50]
@@ -47,10 +49,10 @@ fp2_service_boot:
 fp2_service_loop:
     mov r0, r5
     mov r4, #1
-    bl fp2_ipc_call
+    bl fp2_backlight_fade_step
     sub r0, r6, r5
     mov r4, #0x0d
-    bl fp2_ipc_call
+    bl fp2_backlight_fade_step
     add r5, r5, r7
     cmp r5, r6
     bmi fp2_service_loop
@@ -58,19 +60,19 @@ fp2_service_loop:
     strh r0, [r10, #0x50]
     ldr lr, [fp2_slot_arm9_return]
     ldr lr, [lr]
-    b fp2_retail
+    b fp2_retail_boot_code
 
-fp2_ipc_call:
+fp2_backlight_fade_step:
     stmdb sp!, {lr}
-    swi SwiArm7WaitByLoopImmediate
+    swi SwiWaitByLoop
     mov r0, #0
     mov r1, #0
     mov r2, #1
-    bl fp2_ipc_send
+    bl fp2_write_power_management
     mov r0, #0
     mov r1, r4
     mov r2, #0
-    bl fp2_ipc_send
+    bl fp2_write_power_management
     ldmia sp!, {pc}
 
     .org FlashMeFp2RamAddress + 0xd4
@@ -87,14 +89,14 @@ fp2_flash_boot:
     ldr r4, [fp2_slot_header_ram]
     mov r1, r4
     mov r2, #0x180
-    bl fp2_copy
+    bl fp2_read_firmware
     ldrh r1, [r4, #0x70]
     add r0, r4, #0x100
     ldrh r2, [r0, #0x70]
     cmp r2, r1
     mov r1, r4
     mov r2, #0x20
-    swihi SwiArm7CpuFastSetImmediate
+    swihi SwiCpuFastSet
     mov r0, #0
     mov r2, #0x2c
     ldr r1, [fp2_slot_dma0_src]
@@ -103,7 +105,7 @@ fp2_clear_dma_control:
     str r0, [r1, r2]
     subs r2, r2, #4
     bpl fp2_clear_dma_control
-    bl fp2_boot_return
+    bl fp2_signal_boot_finish
     mov r1, #0x0d00
 
 fp2_wait_d:
@@ -115,15 +117,15 @@ fp2_wait_d:
     ldr r12, [fp2_slot_arm7_return]
     bx r12
 
-fp2_copy:
+fp2_read_firmware:
     ldr r3, [fp2_slot_bios_copy]
     bx r3
 
-fp2_ipc_send:
+fp2_write_power_management:
     ldr r3, [fp2_slot_bios_ipc_send]
     bx r3
 
-fp2_boot_return:
+fp2_signal_boot_finish:
     ldr r3, [fp2_slot_bios_boot_return]
     bx r3
 
@@ -132,24 +134,24 @@ fp2_slot_powercnt:
 fp2_slot_keyinput:
     .dw REG_KEYINPUT
 fp2_slot_arm9_return:
-    .dw Arm9ReturnSlotFp2
+    .dw NdsCartHeaderArm7EntryAddress
 fp2_slot_firmware_bytes:
-    .dw FlashMeFirmwareBytes
+    .dw FirmwareUserSettingsAddress256K
 fp2_slot_header_ram:
-    .dw FlashMeHeaderRamAddress
+    .dw FirmwareUserSettingsRamAddress
 fp2_slot_dma0_src:
-    .dw DMA0_SRC
+    .dw REG_DMA0SAD
 fp2_slot_arm7_return:
-    .dw Arm7ReturnEntry
+    .dw GbaArm7Entry
 fp2_slot_bios_copy:
-    .dw BiosCopyRoutine
+    .dw Bios7FirmwareRead
 fp2_slot_bios_ipc_send:
-    .dw BiosIpcSendRoutine
+    .dw Bios7PowerManagementWrite
 fp2_slot_bios_boot_return:
-    .dw BiosBootReturnRoutine
+    .dw Bios7SignalBootFinish
     .endarea
 
-fp2_retail:
+fp2_retail_boot_code:
 
     .org RetailP2RamAddress
 

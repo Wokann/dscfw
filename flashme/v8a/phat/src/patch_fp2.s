@@ -1,3 +1,5 @@
+; FlashMe boot7 / FP2: ARM7 secondary boot component.
+; FlashMe boot7 / FP2：ARM7 次级启动组件。
 
 .create "build/fp2.bin", 0
     .headersize FlashMeFp2RamAddress
@@ -9,7 +11,7 @@
     mov r1, #1
     strh r1, [r0]
     mov r1, #0x3000
-    swi SwiArm7SoundBiasImmediate
+    swi SwiSoundBias
     bl fp2_clear_dma
     ldr r10, [fp2_slot_keyinput]
     ldrh r0, [r10]
@@ -17,7 +19,7 @@
     .if BuildNoAuto
 
         tst r0, #KEY_SELECT
-        bne fp2_service_boot
+        bne fp2_retail_boot
         b fp2_flash_boot
 
 fp2_retained_boot_state_check:
@@ -27,13 +29,13 @@ fp2_retained_boot_state_check:
         cmp r9, r4
         beq fp2_flash_boot
         cmp r6, r2
-        bne fp2_service_boot
+        bne fp2_retail_boot
         cmp r7, r3
         beq fp2_flash_boot
     .else
 
         tst r0, #KEY_SELECT
-        beq fp2_service_boot
+        beq fp2_retail_boot
         ands r0, r0, #(KEY_A | KEY_B)
         bne fp2_check_boot_state
         ldrh r0, [r10, #(REG_KEYXY - REG_KEYINPUT)]
@@ -47,20 +49,20 @@ fp2_check_boot_state:
         cmp r9, r4
         beq fp2_flash_boot
         cmp r6, r2
-        bne fp2_service_boot
+        bne fp2_retail_boot
         cmp r7, r3
         beq fp2_flash_boot
     .endif
 
-    .org FlashMeFp2RamAddress + Fp2ServiceOffset
-fp2_service_boot:
+    .org FlashMeFp2RamAddress + (0x064 - (BuildNoAuto * 0x10))
+fp2_retail_boot:
     mov r0, #0x0b00
     strh r0, [r10, #0x50]
     bl fp2_header_copy
     .if BuildStealth
         ldr lr, [fp2_slot_arm9_return]
         ldr lr, [lr]
-        b fp2_retail
+        b fp2_retail_boot_code
     .else
 
         mov r5, #0x1000
@@ -70,10 +72,10 @@ fp2_service_boot:
 fp2_service_loop:
         mov r0, r5
         mov r4, #1
-        bl fp2_ipc_call
+        bl fp2_backlight_fade_step
         sub r0, r6, r5
         mov r4, #0x0d
-        bl fp2_ipc_call
+        bl fp2_backlight_fade_step
         add r5, r5, r7
         cmp r5, r6
         bmi fp2_service_loop
@@ -81,28 +83,28 @@ fp2_service_loop:
         strh r0, [r10, #0x50]
         ldr lr, [fp2_slot_arm9_return]
         ldr lr, [lr]
-        b fp2_retail
+        b fp2_retail_boot_code
 
-fp2_ipc_call:
+fp2_backlight_fade_step:
         stmdb sp!, {lr}
-        swi SwiArm7WaitByLoopImmediate
+        swi SwiWaitByLoop
         mov r0, #0
         mov r1, #0
         mov r2, #1
-        bl fp2_ipc_send
+        bl fp2_write_power_management
         mov r0, #0
         mov r1, r4
         mov r2, #0
-        bl fp2_ipc_send
+        bl fp2_write_power_management
         ldmia sp!, {pc}
     .endif
 
-    .org FlashMeFp2RamAddress + Fp2BootStateOffset
+    .org FlashMeFp2RamAddress + ((BuildStealth ? 0x07c : 0x0e0) - (BuildNoAuto * 0x10))
 fp2_boot_state:
     .dw GbaRomTitleAddress
     .ascii "DSBooterPASS"
 
-    .org FlashMeFp2RamAddress + Fp2FlashBootOffset
+    .org FlashMeFp2RamAddress + ((BuildStealth ? 0x08c : 0x0f0) - (BuildNoAuto * 0x10))
 fp2_flash_boot:
     mov r0, #0x0c00
     strh r0, [r10, #0x50]
@@ -114,7 +116,7 @@ fp2_cold_boot:
     mov r11, lr
     bl fp2_clear_dma
     bl fp2_header_copy
-    bl fp2_boot_return
+    bl fp2_signal_boot_finish
     mov r1, #0x8a00
     mov r0, #0x84
     bl fp2_spi_write
@@ -131,7 +133,7 @@ fp2_wait_e:
     bne fp2_wait_e
     bx r11
 
-    .org FlashMeFp2RamAddress + Fp2AuxOffset
+    .org FlashMeFp2RamAddress + ((BuildStealth ? 0x0e4 : 0x148) - (BuildNoAuto * 0x10))
 fp2_aux_enable:
     ldr r0, [fp2_slot_aux_spi_control]
     ldr r3, [fp2_slot_aux_spicnt]
@@ -184,7 +186,7 @@ fp2_dma_wait:
     bgt fp2_dma_copy
     bx lr
 
-    .org FlashMeFp2RamAddress + Fp2SpiSetupOffset
+    .org FlashMeFp2RamAddress + ((BuildStealth ? 0x18c : 0x1f0) - (BuildNoAuto * 0x10))
 fp2_spi_setup:
     stmdb sp!, {r1,lr}
     ldr r1, [fp2_slot_phat_spi_initial]
@@ -207,7 +209,7 @@ fp2_spi_wait_read:
     ldrh r1, [r3, #2]
     bx lr
 
-    .org FlashMeFp2RamAddress + Fp2ClearDmaOffset
+    .org FlashMeFp2RamAddress + ((BuildStealth ? 0x1cc : 0x230) - (BuildNoAuto * 0x10))
 fp2_clear_dma:
     mov r0, #0
     mov r2, #0x2c
@@ -218,48 +220,48 @@ fp2_clear_dma_loop:
     bpl fp2_clear_dma_loop
     bx lr
 
-    .org FlashMeFp2RamAddress + Fp2HeaderCopyOffset
+    .org FlashMeFp2RamAddress + ((BuildStealth ? 0x1e8 : 0x24c) - (BuildNoAuto * 0x10))
 fp2_header_copy:
     stmdb sp!, {lr}
     ldr r0, [fp2_slot_firmware_bytes]
     ldr r4, [fp2_slot_header_ram]
     mov r1, r4
     mov r2, #0x180
-    bl fp2_copy
+    bl fp2_read_firmware
     ldrh r1, [r4, #0x70]
     add r0, r4, #0x100
     ldrh r2, [r0, #0x70]
     cmp r2, r1
     mov r1, r4
     mov r2, #0x20
-    swihi SwiArm7CpuFastSetImmediate
+    swihi SwiCpuFastSet
     ldmia sp!, {pc}
 
-    .org FlashMeFp2RamAddress + Fp2CopyOffset
-fp2_copy:
+    .org FlashMeFp2RamAddress + ((BuildStealth ? 0x220 : 0x284) - (BuildNoAuto * 0x10))
+fp2_read_firmware:
     ldr r3, [fp2_slot_bios_copy]
     bx r3
 
-fp2_ipc_send:
+fp2_write_power_management:
     ldr r3, [fp2_slot_bios_ipc_send]
     bx r3
 
-    .org FlashMeFp2RamAddress + Fp2BootReturnOffset
-fp2_boot_return:
+    .org FlashMeFp2RamAddress + ((BuildStealth ? 0x230 : 0x294) - (BuildNoAuto * 0x10))
+fp2_signal_boot_finish:
     ldr r3, [fp2_slot_bios_boot_return]
     bx r3
 
-    .org FlashMeFp2RamAddress + Fp2PoolOffset
+    .org FlashMeFp2RamAddress + ((BuildStealth ? 0x23c : 0x2a0) - (BuildNoAuto * 0x10))
 fp2_slot_powercnt:
     .dw REG_POWERCNT
 fp2_slot_keyinput:
     .dw REG_KEYINPUT
 fp2_slot_arm9_return:
-    .dw Arm9ReturnSlotFp2
+    .dw NdsCartHeaderArm7EntryAddress
 fp2_slot_arm7_return:
-    .dw Arm7ReturnEntry
+    .dw GbaArm7Entry
 fp2_slot_aux_spi_control:
-    .dw FlashMeAuxSpiControl
+    .dw 0x0000a040
 fp2_slot_aux_spicnt:
     .dw REG_AUXSPICNT
 fp2_slot_dma0_sad:
@@ -267,26 +269,26 @@ fp2_slot_dma0_sad:
 fp2_slot_gc_data_in:
     .dw REG_GCDATAIN
 fp2_slot_dma_card_control:
-    .dw DmaCardCopyControl
+    .dw 0xaf000001
 fp2_slot_phat_spi_initial:
-    .dw PhatSpiInitialControl
+    .dw 0x00008802
 fp2_slot_phat_spi_followup:
-    .dw PhatSpiFollowupControl
+    .dw 0x00008002
 fp2_slot_spicnt:
     .dw REG_SPICNT
 fp2_slot_firmware_bytes:
-    .dw FlashMeFirmwareBytes
+    .dw FirmwareUserSettingsAddress256K
 fp2_slot_header_ram:
-    .dw FlashMeHeaderRamAddress
+    .dw FirmwareUserSettingsRamAddress
 fp2_slot_bios_copy:
-    .dw BiosCopyRoutine
+    .dw Bios7FirmwareRead
 fp2_slot_bios_ipc_send:
-    .dw BiosIpcSendRoutine
+    .dw Bios7PowerManagementWrite
 fp2_slot_bios_boot_return:
-    .dw BiosBootReturnRoutine
+    .dw Bios7SignalBootFinish
     .endarea
 
-fp2_retail:
+fp2_retail_boot_code:
 
     .org RetailP2RamAddress
     .incbin "temp/p2.bin"

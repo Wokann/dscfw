@@ -1,3 +1,5 @@
+; FlashMe boot9 / FP1: ARM9 secondary boot component.
+; FlashMe boot9 / FP1：ARM9 次级启动组件。
 
 .create "build/fp1.bin", 0
     .headersize FlashMeFp1RamAddress
@@ -23,7 +25,7 @@ fp1_wait_d_warm:
     bne fp1_wait_d_warm
     ldr lr, [fp1_slot_arm9_return]
     ldr lr, [lr]
-    b fp1_retail
+    b fp1_retail_boot
 
 fp1_cold_boot:
     mov r0, #0
@@ -35,7 +37,7 @@ fp1_clear_dma_control:
     subs r2, r2, #4
     bpl fp1_clear_dma_control
     mov r0, #1
-    swi SwiArm9CustomPostImmediate
+    swi SwiCustomPost
     ldr r1, [fp1_slot_powercnt]
     mov r0, #0
     strh r0, [r1]
@@ -91,20 +93,20 @@ fp1_zero_loop:
 fp1_context:
 
 fp1_context_r0:
-    .dw Fp1ContextR0
+    .dw FlashMeFp1RamAddress + 0x114
 fp1_context_r1:
-    .dw Fp1ContextR1
+    .dw FlashMeFp1RamAddress
 fp1_context_r2:
-    .dw Fp1ContextR2
+    .dw 0x01000100
 fp1_context_r3:
-    .dw Fp1ContextR3
+    .dw 0x00000000
 fp1_context_r4:
-    .dw Arm9ReturnSlotNext
+    .dw NdsCartHeaderArm9RamAddress
 
-    .headersize Arm9ReturnSlot - orga(fp1_context_r4)
-    .org Arm9ReturnSlot
+    .headersize NdsCartHeaderArm9EntryAddress - orga(fp1_context_r4)
+    .org NdsCartHeaderArm9EntryAddress
 fp1_runtime_loop_slot:
-    .org Arm9ReturnSlot + 4
+    .org NdsCartHeaderArm9EntryAddress + 4
 fp1_context_r5:
     strh r10, [r9]
 fp1_context_r6:
@@ -113,29 +115,29 @@ fp1_context_r7:
     bx r0
     .headersize FlashMeFp1RamAddress
 fp1_context_r8:
-    .dw Fp1ContextR8
+    .dw 0xffff0940
 fp1_context_ipc_sync:
     .dw REG_IPC_SYNC
 fp1_context_r10:
-    .dw Fp1ContextR10
+    .dw 0x00000d00
 fp1_context_r11:
-    .dw Arm9ReturnSlot
+    .dw NdsCartHeaderArm9EntryAddress
 
 fp1_slot_powercnt:
     .dw REG_POWERCNT
 fp1_slot_arm9_boot_state:
-    .dw Arm9BootState
+    .dw Arm9PowerControlValue
 fp1_slot_arm9_return:
-    .dw Arm9ReturnSlot
+    .dw NdsCartHeaderArm9EntryAddress
 fp1_slot_dma0_src:
-    .dw DMA0_SRC
+    .dw REG_DMA0SAD
 fp1_slot_vram_a_cr:
     .dw VRAM_A_CR
 fp1_slot_vram_lcdc_enable_abcd:
-    .dw VramLcdcEnableAbcd
+    .dw VramcntLcdcEnableAbcd
     .endarea
 
-fp1_retail:
+fp1_retail_boot:
     .org RetailP1RamAddress
 
     .incbin "temp/p1.bin"

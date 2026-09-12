@@ -1,7 +1,7 @@
 
 .create "build/p1.bin", 0
     .headersize PrimaryP1RamAddress
-    .area PrimaryP1Bytes, 0x00
+    .area 0x000000fc, 0x00
     .arm
 
     b p1_wait_command
@@ -77,7 +77,7 @@ p1_zero_loop:
     bne p1_zero_loop
     mov pc, lr
 
-    .org PrimaryP1RamAddress + PrimaryP1PoolOffset
+    .org PrimaryP1RamAddress + 0x000000e8
 p1_slot_dma0_sad:
     .dw REG_DMA0SAD
 p1_slot_powercnt:
@@ -85,8 +85,8 @@ p1_slot_powercnt:
 p1_slot_vram_a_cr:
     .dw VRAM_A_CR
 p1_slot_vram_lcdc_disable_all:
-    .dw VramLcdcDisableAll
+    .dw VramcntLcdcEnableAbcd
 p1_slot_arm9_boot_state:
-    .dw Arm9BootState
+    .dw Arm9PowerControlValue
     .endarea
 .close

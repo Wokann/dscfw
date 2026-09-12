@@ -1,3 +1,5 @@
+; FlashMe boot9 / FP1: ARM9 secondary boot component.
+; FlashMe boot9 / FP1：ARM9 次级启动组件。
 
 .create "build/fp1.bin", 0
     .headersize FlashMeFp1RamAddress
@@ -17,7 +19,7 @@ fp1_wait_b:
 
     ldr lr, [fp1_slot_arm9_return]
     ldr lr, [lr]
-    b fp1_retail
+    b fp1_retail_boot
     .else
     ldr r0, [fp1_slot_powercnt]
     ldr r1, [fp1_slot_arm9_boot_state]
@@ -30,7 +32,7 @@ fp1_wait_d_warm:
     bne fp1_wait_d_warm
     ldr lr, [fp1_slot_arm9_return]
     ldr lr, [lr]
-    b fp1_retail
+    b fp1_retail_boot
     .endif
 
 fp1_cold_boot:
@@ -94,24 +96,32 @@ fp1_zero_loop:
     bne fp1_zero_loop
     mov pc, lr
 
-    .org FlashMeFp1RamAddress + Fp1ContextOffset
+    .if BuildStealth
+        .org FlashMeFp1RamAddress + 0x0e4
+    .else
+        .org FlashMeFp1RamAddress + 0x100
+    .endif
 fp1_context:
 
 fp1_context_r0:
-    .dw Fp1ContextR0
+    .if BuildStealth
+        .dw FlashMeFp1RamAddress + 0x0f0
+    .else
+        .dw FlashMeFp1RamAddress + 0x10c
+    .endif
 fp1_context_r1:
-    .dw Fp1ContextR1
+    .dw FlashMeFp1RamAddress
 fp1_context_r2:
-    .dw Fp1ContextR2
+    .dw 0x01000100
 fp1_context_r3:
-    .dw Fp1ContextR3
+    .dw 0x00000000
 fp1_context_r4:
-    .dw Arm9ReturnSlotNext
+    .dw NdsCartHeaderArm9RamAddress
 
-    .headersize Arm9ReturnSlot - orga(fp1_context_r4)
-    .org Arm9ReturnSlot
+    .headersize NdsCartHeaderArm9EntryAddress - orga(fp1_context_r4)
+    .org NdsCartHeaderArm9EntryAddress
 fp1_runtime_loop_slot:
-    .org Arm9ReturnSlot + 4
+    .org NdsCartHeaderArm9EntryAddress + 4
 fp1_context_r5:
     strh r10, [r9]
 fp1_context_r6:
@@ -120,17 +130,17 @@ fp1_context_r7:
     bx r0
     .headersize FlashMeFp1RamAddress
 fp1_context_r8:
-    .dw Fp1ContextR8
+    .dw 0xffff0940
 fp1_context_ipc_sync:
     .dw REG_IPC_SYNC
 fp1_context_r10:
-    .dw Fp1ContextR10
+    .dw 0x00000d00
 fp1_context_r11:
-    .dw Arm9ReturnSlot
+    .dw NdsCartHeaderArm9EntryAddress
 
     .if BuildStealth
 fp1_slot_arm9_return:
-    .dw Arm9ReturnSlot
+    .dw NdsCartHeaderArm9EntryAddress
 fp1_slot_dma0_src:
     .dw REG_DMA0SAD
 fp1_slot_powercnt:
@@ -139,23 +149,23 @@ fp1_slot_powercnt:
 fp1_slot_powercnt:
     .dw REG_POWERCNT
 fp1_slot_arm9_boot_state:
-    .dw Arm9BootState
+    .dw Arm9PowerControlValue
 fp1_slot_arm9_return:
-    .dw Arm9ReturnSlot
+    .dw NdsCartHeaderArm9EntryAddress
 fp1_slot_dma0_src:
     .dw REG_DMA0SAD
     .endif
 fp1_slot_vram_a_cr:
     .dw VRAM_A_CR
 fp1_slot_vram_lcdc_enable_abcd:
-    .dw VramLcdcEnableAbcd
+    .dw VramcntLcdcEnableAbcd
     .if BuildStealth
 fp1_slot_arm9_boot_state:
-    .dw Arm9BootState
+    .dw Arm9PowerControlValue
     .endif
     .endarea
 
-fp1_retail:
+fp1_retail_boot:
     .org RetailP1RamAddress
 
     .incbin "temp/p1.bin"

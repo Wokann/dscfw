@@ -1,3 +1,5 @@
+; FlashMe boot9 / FP1: ARM9 secondary boot component.
+; FlashMe boot9 / FP1：ARM9 次级启动组件。
 
 .create "build/fp1.bin", 0
     .headersize FlashMeFp1RamAddress
@@ -17,7 +19,7 @@ fp1_wait_b:
 
     ldr lr, [fp1_slot_arm9_return]
     ldr lr, [lr]
-    b fp1_retail
+    b fp1_retail_boot
     .else
 
     ldr r0, [fp1_slot_powercnt]
@@ -31,7 +33,7 @@ fp1_wait_d_warm:
     bne fp1_wait_d_warm
     ldr lr, [fp1_slot_arm9_return]
     ldr lr, [lr]
-    b fp1_retail
+    b fp1_retail_boot
     .endif
 
 fp1_cold_boot:
@@ -46,7 +48,7 @@ fp1_clear_dma_range:
     bpl fp1_clear_dma_range
 
     mov r0, #1
-    swi 0x1f0000
+    swi SwiCustomPost
     ldr r1, [fp1_slot_powercnt]
     mov r0, #0
     strh r0, [r1]
@@ -68,7 +70,7 @@ fp1_clear_dma_range:
     str r5, [r4, #4]
     strh r5, [r4, #8]
 
-    mov r3, #FirmwarePart1RamaddrBase
+    mov r3, #FirmwarePart1RamaddrEncodingBase
     ldrb r0, [r3, #-4]
     cmp r0, #0
     beq fp1_wait_d_cold
@@ -78,7 +80,7 @@ fp1_clear_dma_range:
     ldr r0, [fp1_slot_clear_source]
     sub r1, r3, #0x140
     mov r2, #0x28
-    swi SwiArm7CpuFastSetImmediate
+    swi SwiCpuFastSet
 
 fp1_wait_d_cold:
     ldrh r0, [r10]
@@ -113,16 +115,20 @@ fp1_zero_loop:
     bne fp1_zero_loop
     mov pc, lr
 
-    .org FlashMeFp1RamAddress + Fp1ContextOffset
+    .if BuildStealth
+        .org FlashMeFp1RamAddress + 0x11c
+    .else
+        .org FlashMeFp1RamAddress + 0x138
+    .endif
 fp1_context:
 
 fp1_context_r4:
-    .dw Arm9ReturnTrampolineAddress
+    .dw FlashMeArm9ReturnTrampolineAddress
 
-    .headersize Arm9ReturnTrampolineAddress - orga(fp1_context_r4)
-    .org Arm9ReturnTrampolineAddress
+    .headersize FlashMeArm9ReturnTrampolineAddress - orga(fp1_context_r4)
+    .org FlashMeArm9ReturnTrampolineAddress
 fp1_runtime_trampoline_entry:
-    .org Arm9ReturnTrampolineAddress + 4
+    .org FlashMeArm9ReturnTrampolineAddress + 4
 fp1_context_r5:
     strh r8, [r7]
 fp1_context_r6:
@@ -131,13 +137,13 @@ fp1_context_r6:
 fp1_context_ipc_sync:
     .dw REG_IPC_SYNC
 fp1_context_ipc_phase_d:
-    .dw Fp1IpcPhaseD
+    .dw 0x00000d00
 fp1_context_arm9_return:
-    .dw Arm9ReturnSlot
+    .dw NdsCartHeaderArm9EntryAddress
 
     .if BuildStealth
 fp1_slot_arm9_return:
-    .dw Arm9ReturnSlot
+    .dw NdsCartHeaderArm9EntryAddress
 fp1_slot_dma0_src:
     .dw REG_DMA0SAD
 fp1_slot_powercnt:
@@ -146,25 +152,25 @@ fp1_slot_powercnt:
 fp1_slot_powercnt:
     .dw REG_POWERCNT
 fp1_slot_arm9_boot_state:
-    .dw Arm9BootState
+    .dw Arm9PowerControlValue
 fp1_slot_arm9_return:
-    .dw Arm9ReturnSlot
+    .dw NdsCartHeaderArm9EntryAddress
 fp1_slot_dma0_src:
     .dw REG_DMA0SAD
     .endif
 fp1_slot_vram_a_cr:
     .dw VRAM_A_CR
 fp1_slot_vram_lcdc_enable_abcd:
-    .dw VramLcdcEnableAbcd
+    .dw VramcntLcdcEnableAbcd
 fp1_slot_clear_source:
-    .dw Fp1ClearSourceAddress
+    .dw Bios9NintendoLogoAddress
     .if BuildStealth
 fp1_slot_arm9_boot_state:
-    .dw Arm9BootState
+    .dw Arm9PowerControlValue
     .endif
     .endarea
 
-fp1_retail:
+fp1_retail_boot:
     .org RetailP1RamAddress
 
     .incbin "temp/p1.bin"

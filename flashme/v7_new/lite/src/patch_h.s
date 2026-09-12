@@ -17,7 +17,7 @@
     .dh Part2RamaddrFromRam(PrimaryP2RamAddress)
 
     .orga HeaderTypeOffset
-    .dh PrimaryTypeId
+    .dh PrimaryHeaderInstallerClass
 
     .orga HeaderOriginalVersionOffset
     .dh 0xffff
