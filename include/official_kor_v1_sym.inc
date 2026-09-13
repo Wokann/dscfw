@@ -16,4 +16,4 @@
 .definelabel RSA_verify,                               RetailP1RamAddress + 0x000098c4
 .definelabel RSA_verify_with_SHA1,                     RetailP1RamAddress + 0x0000cdb4
 .definelabel TvoutDisplayControlLock,                  RetailP2RamAddress + 0x000005d2
-.definelabel TvoutDisplaySwitchValue,                  RetailP2RamAddress + 0x000007d8
+.definelabel TvoutDisplaySwitchValue,                  RetailP2RamAddress + 0x000007d4

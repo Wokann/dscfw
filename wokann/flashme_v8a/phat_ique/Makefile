@@ -1,0 +1,61 @@
+# FlashMe V8a Phat iQue rebuild: official_ique_v1.bin -> plaintext temp -> plaintext build -> 512 KiB image.
+
+FLASHME_ROOT ?= ../..
+TOOLS_ROOT ?= $(FLASHME_ROOT)/../tools
+INCLUDE_ROOT ?= $(FLASHME_ROOT)/../include
+include $(INCLUDE_ROOT)/build-common.mk
+
+TEMP_DIR := temp
+BUILD_DIR := build
+VARIANT ?= normal
+CRC16_END := 0x7F800
+
+ifeq ($(VARIANT),normal)
+BUILD_STEALTH := 0
+BUILD_NOAUTO := 0
+OUTPUT := flashme_v8a_phat_ique.bin
+else ifeq ($(VARIANT),stealth)
+BUILD_STEALTH := 1
+BUILD_NOAUTO := 0
+OUTPUT := flashme_v8a_phat_ique_stealth.bin
+else ifeq ($(VARIANT),noauto)
+BUILD_STEALTH := 0
+BUILD_NOAUTO := 1
+OUTPUT := flashme_v8a_phat_ique_noauto.bin
+else ifeq ($(VARIANT),stealth-noauto)
+BUILD_STEALTH := 1
+BUILD_NOAUTO := 1
+OUTPUT := flashme_v8a_phat_ique_stealth_noauto.bin
+else
+$(error VARIANT must be normal, stealth, noauto, or stealth-noauto)
+endif
+
+.PHONY: all unpack patch pack normal stealth noauto stealth-noauto variants
+
+.DEFAULT_GOAL := all
+all: pack
+
+unpack: verify-official_ique_v1
+	mkdir -p $(TEMP_DIR) $(BUILD_DIR)
+	$(DSFWTOOL) -x $(OFFICIAL_IQUE_V1) -h $(TEMP_DIR)/h.bin -p1 -decrypt -uncomp $(TEMP_DIR)/p1.bin -p2 -decrypt -uncomp $(TEMP_DIR)/p2.bin -p3 -uncomp $(TEMP_DIR)/p3.bin -p4 -uncomp $(TEMP_DIR)/p4.bin -p5 -uncomp $(TEMP_DIR)/p5.bin
+
+patch: unpack
+	$(ARMIPS) -armimmediate max-imm8 -root . -definelabel BuildStealth $(BUILD_STEALTH) -definelabel BuildNoAuto $(BUILD_NOAUTO) src/main.s
+
+pack: patch
+	$(DSFWTOOL) -c $(OUTPUT) --layout layout.ld -h $(BUILD_DIR)/h.bin -p1 -comp -encrypt $(BUILD_DIR)/p1.bin -p2 -comp -encrypt $(BUILD_DIR)/p2.bin -p3 -comp -flashme $(BUILD_DIR)/p3.bin -p4 -comp -flashme $(BUILD_DIR)/p4.bin -p5 -comp -flashme $(BUILD_DIR)/p5.bin -fh $(BUILD_DIR)/fh.bin -fp1 -comp $(BUILD_DIR)/fp1.bin -fp2 -comp $(BUILD_DIR)/fp2.bin -s 512K --fill FF
+	$(call DisplayFlashMeCrc,$(OUTPUT),$(CRC16_END))
+
+normal:
+	$(MAKE) VARIANT=normal pack
+
+stealth:
+	$(MAKE) VARIANT=stealth pack
+
+noauto:
+	$(MAKE) VARIANT=noauto pack
+
+stealth-noauto:
+	$(MAKE) VARIANT=stealth-noauto pack
+
+variants: normal stealth noauto stealth-noauto
