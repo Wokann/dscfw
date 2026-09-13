@@ -8,14 +8,15 @@
 
 ## 构建
 
-将 <code>official_v3.bin</code> 放入 <code>flashme/</code> 根目录后，在本目录运行
+将 <code>official_v3.bin</code> 放入仓库根目录后，在本目录运行
 <code>make</code>。
 如需构建表中全部变体，运行 <code>make variants</code>。
 
 ## CRC-16/IBM
 
-每次构建都会校验 <code>[0x000000, 0x3F800)</code> 范围。UTF-8
-<code>*.crc16</code> 文件保存对应参考值。
+每次构建会将 <code>[0x000000, 0x3F800)</code> 与其 UTF-8
+<code>*.crc16</code> 记录读取出的值比较。记录固定且不会重写；BIN 生成后若不匹配，
+只报告警告，不会令构建失败。
 
 | 变体 | 输出 | CRC 记录 | CRC-16 |
 | --- | --- | --- | --- |

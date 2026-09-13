@@ -1,7 +1,9 @@
 # FlashMe V4 rebuild: official_v3.bin -> plaintext temp -> plaintext build -> image.
 
 FLASHME_ROOT ?= ..
-include $(FLASHME_ROOT)/tools/flashme-build.mk
+TOOLS_ROOT ?= $(FLASHME_ROOT)/../tools
+INCLUDE_ROOT ?= $(FLASHME_ROOT)/../include
+include $(INCLUDE_ROOT)/build-common.mk
 
 TEMP_DIR := temp
 BUILD_DIR := build
@@ -19,16 +21,12 @@ ifeq ($(VARIANT),normal)
 BUILD_STEALTH := 0
 OUTPUT_BASE := flashme_v4_phat
 FP1_OFFSET := 0x323D0
-REFERENCE := $(REFERENCE_ROOT)/flashme_v4_phat.bin
 CRC16_END := 0x3FDFE
-CRC16_EXPECTED := 0xE316
 else ifeq ($(VARIANT),stealth)
 BUILD_STEALTH := 1
 OUTPUT_BASE := flashme_v4_phat_stealth
 FP1_OFFSET := 0x32390
-REFERENCE := $(REFERENCE_ROOT)/flashme_v4_phat_stealth.bin
 CRC16_END := 0x3FDFE
-CRC16_EXPECTED := 0xB864
 else
 $(error VARIANT must be normal or stealth)
 endif
@@ -38,9 +36,9 @@ OUTPUT := $(OUTPUT_BASE)_fix_fh.bin
 FH_OFFSET := 0x3F680
 else
 OUTPUT := $(OUTPUT_BASE).bin
-endif
-
 CRC16_FILE := $(basename $(OUTPUT)).crc16
+CRC16_EXPECTED := $(strip $(file <$(CRC16_FILE)))
+endif
 
 .PHONY: all unpack patch pack normal stealth variants fix_fh
 
@@ -56,7 +54,7 @@ patch: unpack
 
 pack: patch
 	$(DSFWTOOL) -c $(OUTPUT) -h $(BUILD_DIR)/h.bin -p1 -comp -encrypt --offset 0x180 $(BUILD_DIR)/p1.bin -p2 -comp -encrypt --offset 0x1A0 $(BUILD_DIR)/p2.bin -p3 -comp -flashme --offset 0x183B0 $(BUILD_DIR)/p3.bin -p4 -comp -flashme --offset 0x0F5B0 $(BUILD_DIR)/p4.bin -p5 -comp -flashme --offset 0x2C0 $(BUILD_DIR)/p5.bin -fh --offset $(FH_OFFSET) $(BUILD_DIR)/fh.bin -fp1 -comp --offset $(FP1_OFFSET) $(BUILD_DIR)/fp1.bin -fp2 -comp --offset 0x29FA8 $(BUILD_DIR)/fp2.bin -s 256K --fill FF
-	$(if $(filter 1,$(FIX_FH)),$(call RecordFlashMe,$(OUTPUT),$(CRC16_END),$(CRC16_FILE)),$(call VerifyFlashMe,$(OUTPUT),$(REFERENCE),$(CRC16_END),$(CRC16_EXPECTED),$(CRC16_FILE)))
+	$(if $(filter 0,$(FIX_FH)),$(call CheckFlashMeCrc,$(OUTPUT),$(CRC16_END),$(CRC16_EXPECTED)),$(call DisplayFlashMeCrc,$(OUTPUT),$(CRC16_END)))
 
 normal:
 	$(MAKE) VARIANT=normal pack

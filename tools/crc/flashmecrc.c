@@ -37,13 +37,14 @@ static void usage(const char *program)
     fprintf(stderr,
             "Usage:\n"
             "  %s crc32-official --image FILE --range-end N --private-fill-start N\n"
-            "      --private-fill-end N --expected N --write FILE\n"
+            "      --private-fill-end N --expected N [--write FILE]\n"
             "  %s crc16-flashme --image FILE --reference FILE --range-end N\n"
-            "      --expected N --write FILE\n"
-            "  %s crc16-record --image FILE --range-end N --write FILE\n"
+            "      --expected N [--write FILE]\n"
+            "  %s crc16-check --image FILE --range-end N --expected N\n"
+            "  %s crc16-record --image FILE --range-end N [--write FILE]\n"
             "\n"
             "All numeric values accept decimal or 0x-prefixed hexadecimal notation.\n",
-            program, program, program);
+            program, program, program, program);
 }
 
 static int parse_u32(const char *text, uint32_t *value)
@@ -236,12 +237,12 @@ static int run_official(const Arguments *arguments)
 
     if (arguments->image_path == NULL || arguments->range_end_text == NULL ||
         arguments->fill_start_text == NULL || arguments->fill_end_text == NULL ||
-        arguments->expected_text == NULL || arguments->write_path == NULL ||
+        arguments->expected_text == NULL ||
         !parse_u32(arguments->range_end_text, &range_end) ||
         !parse_u32(arguments->fill_start_text, &fill_start) ||
         !parse_u32(arguments->fill_end_text, &fill_end) ||
         !parse_u32(arguments->expected_text, &expected)) {
-        fprintf(stderr, "error: crc32-official needs valid image, range, fill, expected, and write options\n");
+        fprintf(stderr, "error: crc32-official needs valid image, range, fill, and expected options\n");
         return 0;
     }
 
@@ -265,7 +266,8 @@ static int run_official(const Arguments *arguments)
                     ", expected 0x%08" PRIX32 " [%s, 0x000000..0x%06" PRIX32 ")\n",
                     actual, expected, arguments->image_path, range_end);
             result = 0;
-        } else if (!write_crc(arguments->write_path, 8, actual)) {
+        } else if (arguments->write_path != NULL &&
+                   !write_crc(arguments->write_path, 8, actual)) {
             result = 0;
         } else {
             printf("PASS CRC-32/ISO-HDLC: 0x%08" PRIX32
@@ -292,11 +294,10 @@ static int run_flashme(const Arguments *arguments)
 
     if (arguments->image_path == NULL || arguments->reference_path == NULL ||
         arguments->range_end_text == NULL || arguments->expected_text == NULL ||
-        arguments->write_path == NULL ||
         !parse_u32(arguments->range_end_text, &range_end) ||
         !parse_u32(arguments->expected_text, &expected_u32) ||
         expected_u32 > UINT16_MAX) {
-        fprintf(stderr, "error: crc16-flashme needs valid image, reference, range, expected, and write options\n");
+        fprintf(stderr, "error: crc16-flashme needs valid image, reference, range, and expected options\n");
         return 0;
     }
     expected = (uint16_t)expected_u32;
@@ -332,7 +333,8 @@ static int run_flashme(const Arguments *arguments)
                     ", expected 0x%04" PRIX16 " [%s]\n",
                     image_crc, expected, arguments->image_path);
             result = 0;
-        } else if (!write_crc(arguments->write_path, 4, image_crc)) {
+        } else if (arguments->write_path != NULL &&
+                   !write_crc(arguments->write_path, 4, image_crc)) {
             result = 0;
         } else {
             printf("PASS CRC-16/IBM: 0x%04" PRIX16
@@ -355,9 +357,8 @@ static int run_record(const Arguments *arguments)
     int result = 1;
 
     if (arguments->image_path == NULL || arguments->range_end_text == NULL ||
-        arguments->write_path == NULL ||
         !parse_u32(arguments->range_end_text, &range_end)) {
-        fprintf(stderr, "error: crc16-record needs valid image, range, and write options\n");
+        fprintf(stderr, "error: crc16-record needs valid image and range options\n");
         return 0;
     }
 
@@ -374,12 +375,62 @@ static int run_record(const Arguments *arguments)
         result = 0;
     } else {
         actual = crc16_ibm(image.bytes, range_end);
-        if (!write_crc(arguments->write_path, 4, actual)) {
+        if (arguments->write_path != NULL &&
+            !write_crc(arguments->write_path, 4, actual)) {
             result = 0;
         } else {
             printf("INFO CRC-16/IBM: 0x%04" PRIX16
-                   " [%s, 0x000000..0x%06" PRIX32
-                   ") recorded without a historical reference\n",
+                   " [%s, 0x000000..0x%06" PRIX32 ")%s\n",
+                   actual, arguments->image_path, range_end,
+                   arguments->write_path != NULL
+                       ? " recorded without a historical reference"
+                       : "");
+        }
+    }
+
+    free_file(&image);
+    return result;
+}
+
+static int run_check(const Arguments *arguments)
+{
+    FileData image;
+    uint32_t range_end;
+    uint32_t expected_u32;
+    uint16_t expected;
+    uint16_t actual;
+    int result = 1;
+
+    if (arguments->image_path == NULL || arguments->range_end_text == NULL ||
+        arguments->expected_text == NULL ||
+        !parse_u32(arguments->range_end_text, &range_end) ||
+        !parse_u32(arguments->expected_text, &expected_u32) ||
+        expected_u32 > UINT16_MAX) {
+        fprintf(stderr, "error: crc16-check needs valid image, range, and expected options\n");
+        return 0;
+    }
+    expected = (uint16_t)expected_u32;
+
+    if (!read_file(arguments->image_path, &image)) {
+        return 0;
+    }
+
+    if (image.size != NINTENDO_FIRMWARE_BYTES) {
+        fprintf(stderr, "error: rebuilt image '%s' must be exactly 0x%X bytes, found 0x%zX\n",
+                arguments->image_path, NINTENDO_FIRMWARE_BYTES, image.size);
+        result = 0;
+    } else if (range_end == 0 || range_end > image.size) {
+        fprintf(stderr, "error: invalid CRC-16 range\n");
+        result = 0;
+    } else {
+        actual = crc16_ibm(image.bytes, range_end);
+        if (actual != expected) {
+            printf("WARN CRC-16/IBM: got 0x%04" PRIX16
+                   ", expected 0x%04" PRIX16 " [%s, 0x000000..0x%06" PRIX32 ")\n",
+                   actual, expected, arguments->image_path, range_end);
+        } else {
+            printf("PASS CRC-16/IBM: 0x%04" PRIX16
+                   " [%s, 0x000000..0x%06" PRIX32 ")\n",
                    actual, arguments->image_path, range_end);
         }
     }
@@ -408,6 +459,9 @@ int main(int argc, char **argv)
     }
     if (strcmp(arguments.mode, "crc16-flashme") == 0) {
         return run_flashme(&arguments) ? EXIT_SUCCESS : EXIT_FAILURE;
+    }
+    if (strcmp(arguments.mode, "crc16-check") == 0) {
+        return run_check(&arguments) ? EXIT_SUCCESS : EXIT_FAILURE;
     }
     if (strcmp(arguments.mode, "crc16-record") == 0) {
         return run_record(&arguments) ? EXIT_SUCCESS : EXIT_FAILURE;

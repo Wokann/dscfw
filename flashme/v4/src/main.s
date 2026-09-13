@@ -5,8 +5,8 @@
 
 ; Symbol layers: NDS common state, Nintendo base-firmware state, then FlashMe-local state.
 ; 符号层：NDS 通用状态、任天堂基础固件状态，最后是 FlashMe 本地状态。
-.include "../include/common.inc"
-.include "../include/official_v3_sym.inc"
+.include "../../include/common.inc"
+.include "../../include/official_v3_sym.inc"
 .include "include/symbol.inc"
 .include "src/patch_h.s"
 .include "src/patch_p1.s"

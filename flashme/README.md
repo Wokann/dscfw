@@ -11,8 +11,8 @@ image or reliable technical source is present.
 
 ## Build
 
-Place <code>official_v3.bin</code> and <code>official_v6.bin</code> in this
-directory. Build every available package with:
+Place <code>official_v3.bin</code> and <code>official_v6.bin</code> in the
+repository root. Build every available package with:
 
 ~~~sh
 make
@@ -34,13 +34,14 @@ over the stated half-open range. The source input is not modified.
 | <code>official_v3.bin</code> | <code>[0x000000, 0x3F6F8)</code> | <code>0x96DF1D27</code> |
 | <code>official_v6.bin</code> | <code>[0x000000, 0x3F9B8)</code> | <code>0x594067E9</code> |
 
-The generated <code>official_v3.crc32</code> and <code>official_v6.crc32</code>
-files record these values.
+The root-level <code>official_v3.crc32</code> and <code>official_v6.crc32</code>
+files are fixed comparison records and are never rewritten by validation.
 
 ## FlashMe output CRC-16/IBM
 
-Each package Makefile verifies its listed half-open range and writes the
-matching UTF-8 <code>*.crc16</code> value.
+Each historical package Makefile compares its listed half-open range with the
+value read from its fixed UTF-8 <code>*.crc16</code> record. It reports a
+mismatch after BIN creation without rewriting the record or failing the build.
 
 | Package | Model | Nintendo input | Output variants | CRC range |
 | --- | --- | --- | --- | --- |

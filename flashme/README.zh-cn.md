@@ -10,7 +10,7 @@
 
 ## 构建
 
-将 <code>official_v3.bin</code> 与 <code>official_v6.bin</code> 放入本目录后，使用：
+将 <code>official_v3.bin</code> 与 <code>official_v6.bin</code> 放入仓库根目录后，使用：
 
 ~~~sh
 make
@@ -30,12 +30,13 @@ make
 | <code>official_v3.bin</code> | <code>[0x000000, 0x3F6F8)</code> | <code>0x96DF1D27</code> |
 | <code>official_v6.bin</code> | <code>[0x000000, 0x3F9B8)</code> | <code>0x594067E9</code> |
 
-生成的 <code>official_v3.crc32</code> 与 <code>official_v6.crc32</code> 会记录这些值。
+根目录的 <code>official_v3.crc32</code> 与 <code>official_v6.crc32</code>
+是固定比对记录，校验不会重写它们。
 
 ## FlashMe 输出 CRC-16/IBM
 
-每个包的 Makefile 都会校验表中的左闭右开范围，并写出对应的 UTF-8
-<code>*.crc16</code> 值。
+历史镜像复现包的 Makefile 会将表中左闭右开范围与其固定 UTF-8 <code>*.crc16</code>
+记录读取的值比较。BIN 生成后若不匹配，只会报告警告，不会重写记录或令构建失败。
 
 | 包 | 型号 | 任天堂输入 | 输出变体 | CRC 范围 |
 | --- | --- | --- | --- | --- |

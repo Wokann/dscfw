@@ -9,14 +9,15 @@ not distribute Nintendo firmware images or original FlashMe images.
 
 ## Build
 
-Place <code>official_v3.bin</code> in the <code>flashme/</code> root, then run
+Place <code>official_v3.bin</code> in the repository root, then run
 <code>make</code> from this directory.
 To build every listed variant, run <code>make variants</code>.
 
 ## CRC-16/IBM
 
-Each build verifies the byte range <code>[0x000000, 0x3F800)</code>.
-The UTF-8 <code>*.crc16</code> records contain the reference values.
+Each build compares <code>[0x000000, 0x3F800)</code> with the value read from
+its UTF-8 <code>*.crc16</code> record. Records are fixed and never rewritten;
+a mismatch is reported after BIN creation without failing the build.
 
 | Variant | Output | CRC record | CRC-16 |
 | --- | --- | --- | --- |

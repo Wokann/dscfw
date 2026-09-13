@@ -9,19 +9,21 @@ not distribute Nintendo firmware images or original FlashMe images.
 
 ## Build
 
-Place <code>official_v3.bin</code> in the <code>flashme/</code> root, then run
+Place <code>official_v3.bin</code> in the repository root, then run
 <code>make</code> from this directory.
 
 For the FH-relocated test build, run <code>make fix_fh</code>. It writes
 <code>flashme_v1_phat_fix_fh.bin</code>, placing FH at the V5+ address
 <code>0x3F680</code> and compiling P2 to read the same address. As this is an
-intentional non-original layout, the build records its CRC instead of comparing
-against the original-image CRC reference.
+intentional non-original layout, it produces only the BIN, prints its CRC-16,
+and has no CRC record or original-image CRC comparison.
 
 ## CRC-16/IBM
 
-Each build verifies the byte range <code>[0x000000, 0x3FDFE)</code>.
-The UTF-8 <code>*.crc16</code> records contain the reference values.
+The original-layout build verifies <code>[0x000000, 0x3FDFE)</code>. Its UTF-8
+<code>*.crc16</code> record is a fixed archival reference and is never created
+or updated by a build. A mismatch is reported after BIN creation and is not
+fatal to the build.
 
 | Variant | Output | CRC record | CRC-16 |
 | --- | --- | --- | --- |
