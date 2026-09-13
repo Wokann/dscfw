@@ -1,160 +1,140 @@
-# FlashMe version change log
+# FlashMe Version Change Log
 
 [简体中文](CHANGELOG.zh-cn.md)
 
-## Scope and reading guide
+## Functional changes by version
 
-This is a user-facing record of the behaviours visible in the recovered
-FlashMe V1, V3–V8a code. It is based primarily on the reconstructed assembly
-and the Nintendo V3/V6 code it changes, rather than treating old release-page
-descriptions as proof. “Confirmed” below means that the branch, data flow, or
-hardware action is visible in code; an explicitly marked uncertainty is not a
-missing-feature claim.
+### V1
 
-The source tree does not distribute Nintendo firmware or original FlashMe
-images. V2 has no original image or source available here, so it is not
-reconstructed and no functional claim is made for it.
+- **Booting a Slot-2 DS program.** If the Slot-2/GBA ROM Game Code is <code>PASS</code>, or its Game Title begins with <code>DSBooter</code>, FlashMe automatically treats it as a DS program and boots it at power-on. Holding <code>A+B+X+Y</code> forces this path even if neither marker is present in the Slot-2 header.
+- **Booting the retained original firmware.** Holding <code>Select</code> at power-on enters the retained original Nintendo firmware.
+- **Recovery boot entry.** If the Slot-2/GBA ROM Game Code is <code>BOOT</code>, or if <code>A+B+Start+Select</code> are held, a DS program on Slot-2 can be force-started at power-on. Because this code is located very early in the firmware, it can start a Slot-2 recovery program to reinstall firmware if that early portion has already been written during an interrupted flash, or if data outside SL1's protected first <code>0x10000</code> bytes becomes damaged after FlashMe is installed.
+- **Wireless MultiBoot verification removed.** Removes the RSA verification check for Wireless MultiBoot (such as Download Play).
+- **Original-firmware startup fade.** When booting retained original firmware, the display fades from black to white and then shows the health and safety prompt. (Slot-2 DS mode instead proceeds directly with a white screen into the corresponding game or flash cartridge.)
+- **Base firmware.** Based on official DS Phat V3 firmware (<code>NTR-WORLD WIDE-Ver3.0</code>).
 
-## Behaviour present from V1 onward
+### V2
 
-The recovered V1 already contains the principal FlashMe design, retained by
-later versions unless a version entry below says otherwise:
+- No original V2 image backup has been found. Forum material about functional changes from V1 to V3 also contains errors, so a functional reconstruction cannot be attempted.
+- **V1-to-V2 upgrades do not require SL1 bridging.** FlashMe changes try to avoid modifying content stored at the front of the firmware, altering only the later region. Thus, SL1 must be bridged only for initial installation from official firmware to FlashMe, to release protection of the first <code>0x10000</code> bytes. Later upgrades do not require bridging provided that range is unchanged. (Forum records establish this information as reliable.)
+- **Base firmware.** Based on official DS Phat V3 firmware.
 
-- **Slot-2 DS-program boot.** A Slot-2/GBA ROM whose Game Code is `PASS`, or
-  whose title begins with `DSBooter`, automatically selects the FlashMe boot
-  path. Holding `A+B+X+Y` forces that path even when the Slot-2 header does
-  not carry either identifier.
-- **Retained-firmware boot.** In the ordinary selector, holding `Select`
-  chooses the retained Nintendo-firmware path instead of the FlashMe path.
-- **Early recovery entry.** `BOOT` as the Slot-2 Game Code is tested before
-  `PASS`/`DSBooter`; V1–V8 also select an earlier alternate route when
-  `A+B+Start+Select` are held. This is the firmware-side entry that a
-  Slot-2 recovery/flashing program can use; the program which repairs a
-  damaged firmware is external to FlashMe itself.
-- **Relaxed firmware validation.** The retained Nintendo P1/P3 code has
-  component-integrity gates bypassed, and the P3 public-key formatted-digest
-  and SHA-1-style digest-comparison entries return success. In practical
-  terms, this removes the corresponding Nintendo signature-validation barrier
-  for the affected NDS-program path.
-- **Normal boot presentation.** The normal V1 path contains a PWM backlight
-  fade-in sequence. There is no separate stealth build in V1.
+### V3
 
-## Version-by-version changes
+- **Health prompt removed.** When booting retained original firmware, the black-to-white fade remains, but the health and safety prompt is no longer shown afterward.
+- **V1-to-V3 upgrades do not require SL1 bridging.** The first <code>0x10000</code> bytes are identical in V1 through V3, so upgrades do not require bridging.
+- **Base firmware.** Based on official DS Phat V3 firmware (<code>NTR-WORLD WIDE-Ver3.0</code>).
 
-### V1 — initial recovered feature set
+### V4
 
-V1 establishes the complete two-stage FlashMe loader, the Slot-2 automatic and
-manual selectors, the early recovery entry, and the validation bypasses above.
-Its normal path also performs the backlight fade-in. The exact Nintendo UI
-scene affected by one retained-P3 Logo/state gate is not named solely from the
-code; it must not be presented as a separately proven “health-screen” patch.
+V4 provides two distinct builds according to whether the health prompt is shown:
 
-### V2 — unavailable
+- **normal build:** Removes the health prompt while retaining the startup fade when booting retained original firmware.
+- **stealth build:** Retains the health prompt while removing the startup fade. “Stealth” means concealing that the console has been reflashed.
 
-No original V2 image or source has been found for this repository. It is
-intentionally omitted rather than simulated from forum recollections or from
-the adjacent V1/V3 builds.
+Other changes:
 
-### V3 — normal startup-transition change
+- **V1-to-V4 upgrades do not require SL1 bridging.** The first <code>0x10000</code> bytes are identical in V1 through V4, so upgrades do not require bridging.
+- **Base firmware.** Based on official DS Phat V3 firmware (<code>NTR-WORLD WIDE-Ver3.0</code>).
+- V4 contains one touchscreen-controller SPI operation, but the code does not use its returned value; its purpose remains unknown.
 
-V3 preserves the V1 core behaviour and adds four normal-only edits to the
-retained Nintendo P1 alpha-transition path. A user sees a changed startup
-display transition in the normal build. The code proves the alpha-dispatch,
-threshold, and terminal-branch changes, but does not by itself identify the
-exact on-screen scene; therefore this changelog does not claim V3 as the first
-proven version to remove a particular health-warning screen.
+### V5
 
-### V4 — normal and stealth become separate builds
+- **Two builds retained.** normal and stealth continue as separate releases.
+- **Wi-Fi-settings-area fix.** In V1 through V4, FlashMe's secondary boot-header file occupied an address range later used to store Wi-Fi access-point data. After the first Wi-Fi-enabled game, <em>Mario Kart DS</em>, was released, players with older FlashMe versions could experience a bricked console. V5 moves the occupied secondary boot-header range earlier, avoiding that data.
+- **Upgrading V1-V4 to V5 requires SL1 bridging.** The first <code>0x10000</code> bytes change in V5, so V1-V4 consoles must bridge SL1 before upgrading.
+- **Installer internal version-class update.** Within <code>flashme.nds</code>, V1-V4 are treated as one class: byte <code>0x17C</code> in the firmware file header is <code>1</code> (class 1), and byte <code>0x17C</code> in the secondary boot-file header at the end of the firmware is also <code>1</code> (fixed 1). From V5 onward, byte <code>0x17C</code> in the firmware file header is <code>2</code> (class 2), and byte <code>0x17C</code> in the secondary boot-file header is <code>2</code> (that value plus 3 is the version number). A value of <code>3</code> in the firmware file header denotes hbfirmware custom firmware; the secondary boot-file header then contains <code>0xFF</code>.
+- **Base firmware.** Based on official DS Phat V3 firmware (<code>NTR-WORLD WIDE-Ver3.0</code>).
 
-V4 introduces the two user-selectable presentation policies used by later
-versions:
+### V6
 
-- **normal** keeps the V3-style transition edits and the normal fade-in path;
-- **stealth** leaves those retained-P1 alpha bytes unmodified and skips the
-  normal PWM fade-in loop, preserving the more stock-like startup-display
-  route conventionally associated with FlashMe Stealth.
+- **Internal logic improvements.** In theory, there are no clearly user-visible functional changes.
+- **V5-to-V6 upgrades do not require SL1 bridging.** The first <code>0x10000</code> bytes are identical in V5 and V6, so upgrades do not require bridging.
+- **Base firmware.** Based on official DS Phat V3 firmware (<code>NTR-WORLD WIDE-Ver3.0</code>).
 
-V4 also adds a touch-controller SPI transaction during the FlashMe path. Its
-result is not consumed, so no separate user-visible purpose can be established
-from the recovered code.
+### V7 Old Phat
 
-### V5 — loader-layout and installer-recognition update
+- **NeoFlash MK2/MK3 support.** Supports directly booting Slot-1 NeoFlash MK2 and MK3 flash cartridges from FlashMe; DSLINK can also be booted.
+- **V5-to-V7 Old Phat upgrades do not require SL1 bridging.** The first <code>0x10000</code> bytes are identical in V5 through V7 Old Phat, so upgrades do not require bridging.
+- **Base firmware.** Based on official DS Phat V3 firmware (<code>NTR-WORLD WIDE-Ver3.0</code>).
 
-No new end-user boot control is confirmed over V4. V5 changes the internal
-first/second-stage hand-off layout and moves the secondary header location. It
-also starts the V5-and-later installer identification scheme, so compatible
-installers can distinguish the V5+ family instead of treating it as the older
-undifferentiated FlashMe class.
+### V7 Old Lite
 
-### V6 — revised early-start preparation
+- **Lite-model release.** DS Phat and DS Lite are different hardware types and use different official firmware, so V7 begins to provide separate Lite firmware. Forums report beta1 and beta2 Lite test versions, but only one version has been found. It is probably beta2, because the standalone V7 Lite installer contains firmware identical to the Lite image in the integrated V7 New installer.
+- **NeoFlash MK2/MK3 support.** Supports directly booting Slot-1 NeoFlash MK2 and MK3 flash cartridges from FlashMe; DSLINK can also be booted.
+- **V5-to-V7 Old Lite upgrades require SL1 bridging.** Lite and Phat versions differ in certain functions, including backlight behavior, although Lite firmware can be forcibly installed on a Phat. Their different base firmware means the first <code>0x10000</code> bytes necessarily differ, so a cross-model installation requires bridging. CPU20 Phat boards use the same power-management controller as the Lite, so installing Lite firmware gives them the Lite's four-level brightness control.
+- **Base firmware.** Based on official DS Lite V6 firmware (<code>USG-WORLD WIDE-Ver2.0</code>).
 
-V6 retains the normal/stealth choices and changes cold-start preparation: it
-restores a boot-complete flag write, conditionally prepares a standard NDS
-header/Logo area in RAM, and restores an earlier call ordering before the SPI
-sequence. These are concrete compatibility/initialisation changes, but the
-recovered code does not establish one new, independently visible user feature.
+### V7 New
 
-### V7 Old — Phat/Lite split and an additional matching-card boot path
+- **Installer integrates both models.** From this version, <code>flashme.nds</code> includes both Phat and Lite firmware and distinguishes the current console by checking its power-management controller. A CPU20 Phat is consequently identified as a Lite and gains four-level brightness control.
+- **NeoFlash MK2/MK3 support.** Supports directly booting Slot-1 NeoFlash MK2 and MK3 flash cartridges from FlashMe; DSLINK can also be booted.
+- **Phat route: V5-to-V7 upgrades do not require SL1 bridging.** The first <code>0x10000</code> bytes are identical in V5 through V7 Phat, so upgrades do not require bridging. Cross-model flashing still requires bridging.
+- **Base firmware.** Phat is based on official DS Phat V3 firmware (<code>NTR-WORLD WIDE-Ver3.0</code>); Lite is based on official DS Lite V6 firmware (<code>USG-WORLD WIDE-Ver2.0</code>).
 
-V7 Old introduces separate Phat and Lite builds. When the usual Slot-2
-selectors do not choose FlashMe, its normal path can probe an auxiliary
-device/card, validate an NDS header, and directly launch its ARM9 and ARM7
-payloads. This is an additional boot path for a matching device, not a generic
-claim that every Slot-1 card is booted this way: its handshake uses non-standard
-commands and the exact target hardware remains unidentified.
+### V8
 
-### V7 New — Phat stealth hardware-protocol revision
+V8 adds noauto branches for whether Slot-2 cartridges are automatically booted. These branches also have normal and stealth forms:
 
-The recovered Lite prefix is unchanged from V7 Old. V7 New Phat changes SPI
-setup, response handling, and a write helper in its stealth cold-start path.
-It is a real code change, but its high-level hardware target and a distinct
-user-visible consequence are not established by the available code.
+- **normal:** Retains automatic <code>PASS</code>/<code>DSBooter</code> selection and the <code>A+B+X+Y</code> combination for forcing the FlashMe path. Removes the health prompt.
+- **stealth:** Retains automatic <code>PASS</code>/<code>DSBooter</code> selection and the <code>A+B+X+Y</code> combination for forcing the FlashMe path. Retains the health prompt.
+- **noauto:** Disables automatic <code>PASS</code>/<code>DSBooter</code> selection; <code>A+B+X+Y</code> must be held to enter FlashMe manually. Removes the health prompt.
+- **stealth_noauto:** Disables automatic <code>PASS</code>/<code>DSBooter</code> selection; <code>A+B+X+Y</code> must be held to enter FlashMe manually. Retains the health prompt.
+- **Booting the retained original firmware.** At power-on, holding <code>Select</code> enters the retained original firmware in every variant.
+- **Lite startup fade removed.** From V3 onward, normal Lite builds used a black-to-white fade when entering retained firmware; V8 removes it, producing a fixed white-screen display instead. stealth and stealth_noauto retain V4's no-fade behavior. Phat retains its V4-era behavior.
 
-### V8 — noauto variants; V7 auxiliary-card entry removed
+Other changes:
 
-V8 adds two more build variants:
+- **NeoFlash MK2/MK3 support removed.** MK2 and MK3 flash cartridges, including DSLINK, are no longer supported. When the Slot-2 DS-mode path is not selected, the program sends a probe signal to the Slot-1 cartridge to determine whether it is an MK2/MK3-type card and whether it should subsequently boot it. This probe signal can cause unpredictable responses from non-target cartridges. Its removal is presumed to be for this reason.
+- **Phat route: V5-to-V8 upgrades do not require SL1 bridging.** The first <code>0x10000</code> bytes are identical in V5 through V8 Phat, so upgrades do not require bridging. Cross-model flashing still requires bridging.
+- **Lite route: V7-to-V8 upgrades do not require SL1 bridging.** The first <code>0x10000</code> bytes are identical in V7 through V8 Lite, so upgrades do not require bridging. Cross-model flashing still requires bridging.
+- **Base firmware.** Phat is based on official DS Phat V3 firmware (<code>NTR-WORLD WIDE-Ver3.0</code>); Lite is based on official DS Lite V6 firmware (<code>USG-WORLD WIDE-Ver2.0</code>).
 
-- **noauto** disables automatic `PASS`/`DSBooter` selection; FlashMe must be
-  selected manually with `A+B+X+Y`.
-- **stealth_noauto** combines that manual-selection policy with stealth's
-  stock-like presentation route.
+### V8a
 
-The normal and stealth variants retain automatic `PASS`/`DSBooter` selection.
-V8 also removes every normal FP2 entry into V7's auxiliary/card loader, so the
-V7 matching-device boot attempt is no longer made by the ordinary V8 selector.
-On Lite normal builds, the previous PWM backlight fade loop is replaced with a
-fixed delay.
+- **normal:** Retains automatic <code>PASS</code>/<code>DSBooter</code> selection and the <code>A+B+X+Y</code> combination for forcing the FlashMe path. Removes the health prompt.
+- **stealth:** Retains automatic <code>PASS</code>/<code>DSBooter</code> selection and the <code>A+B+X+Y</code> combination for forcing the FlashMe path. Retains the health prompt.
+- **noauto:** Disables automatic <code>PASS</code>/<code>DSBooter</code> selection; <code>Select</code> must be held to enter FlashMe manually. Removes the health prompt.
+- **stealth_noauto:** Disables automatic <code>PASS</code>/<code>DSBooter</code> selection; <code>Select</code> must be held to enter FlashMe manually. Retains the health prompt.
+- **Booting the retained original firmware.** Holding <code>Select</code> at power-on enters the retained original firmware. (The two noauto builds enter retained original firmware without a button; holding <code>Select</code> instead enters FlashMe.)
+- **Recovery-entry change.** The recovery combination changes from <code>A+B+Start+Select</code> to <code>Start+Select</code>. Holding that combination, or using a Slot-2/GBA ROM whose Game Code is <code>BOOT</code>, attempts to force-start either a Slot-1 or Slot-2 cartridge.
+- **Phat and Lite routes: upgrading any version before V8a to V8a requires SL1 bridging.** The first <code>0x10000</code> bytes in both V8a Phat and Lite differ from all V8 and earlier versions, so upgrading requires bridging before flashing the firmware.
+- **Base firmware.** Phat is based on official DS Phat V3 firmware (<code>NTR-WORLD WIDE-Ver3.0</code>); Lite is based on official DS Lite V6 firmware (<code>USG-WORLD WIDE-Ver2.0</code>).
 
-### V8a — revised manual selection and standard card loader
+## Button-combination summary
 
-V8a changes both the early alternate boot path and the noauto control:
-
-- its early alternate route is selected by `Start+Select` or the earlier
-  `BOOT` Game Code test, replacing the V1–V8 `A+B+Start+Select` combination;
-- in **noauto** and **stealth_noauto**, holding `Select` selects FlashMe,
-  replacing V8's `A+B+X+Y` requirement;
-- its primary stage adds a standard `B7`-based Slot-1 NDS loader, using the
-  NDS header's ARM9/ARM7 load and entry fields when that route is selected;
-- cold preparation also clears the main and sub display-control registers.
-
-The older installer metadata still reports V8a as V8. That is a limitation of
-the V5+ identifier scheme, not evidence that the two builds behave identically.
-
-## Variant summary
-
-| Variant | User-visible policy |
-| --- | --- |
-| `normal` | Standard FlashMe automatic Slot-2 selection and normal startup presentation for that version. |
-| `stealth` | Uses the stock-like startup-display route instead of normal's transition/fade modifications. |
-| `noauto` | Requires an explicit user action instead of automatic `PASS`/`DSBooter` selection: `A+B+X+Y` in V8, `Select` in V8a. |
-| `stealth_noauto` | Combines stealth presentation with noauto manual selection. |
-
-## Evidence and limits
-
-The detailed branch-level evidence, component offsets, Nintendo V3/V6 semantic
-mapping, and explicitly unresolved questions are recorded in
-[FUNCTIONAL_ANALYSIS.md](FUNCTIONAL_ANALYSIS.md). The RSA conclusion follows
-the recovered PKCS#1-v1.5-shaped formatted-digest path and the independent
-[RFC 8017 specification](https://www.rfc-editor.org/rfc/rfc8017.html#section-8.2).
-Hardware register interpretations are cross-checked against
-[GBATEK](https://raw.githubusercontent.com/mgba-emu/gbatek/master/ds.md).
+| Version | Model | Variant | Combination to force the Slot-2 path | Combination to force retained official firmware | Early-start combination, normally used for recovery |
+| --- | --- | --- | --- | --- | --- |
+| <code>v1</code> | <code>phat</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+| <code>v2</code> | <code>phat</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+| <code>v3</code> | <code>phat</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+| <code>v4</code> | <code>phat</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>phat</code> | <code>stealth</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+| <code>v5</code> | <code>phat</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>phat</code> | <code>stealth</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+| <code>v6</code> | <code>phat</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>phat</code> | <code>stealth</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+| <code>v7_old</code> | <code>phat</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>phat</code> | <code>stealth</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>lite</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>lite</code> | <code>stealth</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+| <code>v7_new</code> | <code>phat</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>phat</code> | <code>stealth</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>lite</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>lite</code> | <code>stealth</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+| <code>v8</code> | <code>phat</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>phat</code> | <code>stealth</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>phat</code> | <code>noauto</code> | <code>A+B+X+Y</code> | Not required | <code>A+B+Start+Select</code> |
+|  | <code>phat</code> | <code>stealth_noauto</code> | <code>A+B+X+Y</code> | Not required | <code>A+B+Start+Select</code> |
+|  | <code>lite</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>lite</code> | <code>stealth</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>A+B+Start+Select</code> |
+|  | <code>lite</code> | <code>noauto</code> | <code>A+B+X+Y</code> | Not required | <code>A+B+Start+Select</code> |
+|  | <code>lite</code> | <code>stealth_noauto</code> | <code>A+B+X+Y</code> | Not required | <code>A+B+Start+Select</code> |
+| <code>v8a</code> | <code>phat</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>Start+Select</code> |
+|  | <code>phat</code> | <code>stealth</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>Start+Select</code> |
+|  | <code>phat</code> | <code>noauto</code> | <code>Select</code> | Not required | <code>Start+Select</code> |
+|  | <code>phat</code> | <code>stealth_noauto</code> | <code>Select</code> | Not required | <code>Start+Select</code> |
+|  | <code>lite</code> | <code>normal</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>Start+Select</code> |
+|  | <code>lite</code> | <code>stealth</code> | <code>A+B+X+Y</code> | <code>Select</code> | <code>Start+Select</code> |
+|  | <code>lite</code> | <code>noauto</code> | <code>Select</code> | Not required | <code>Start+Select</code> |
+|  | <code>lite</code> | <code>stealth_noauto</code> | <code>Select</code> | Not required | <code>Start+Select</code> |
