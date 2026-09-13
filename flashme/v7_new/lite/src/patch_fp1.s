@@ -196,28 +196,28 @@ fp1_retail_boot:
 
     .if !BuildStealth
 
-        .org RetailP1RamAddress + 0x2f8
+    .org BootStateDispatch
         .thumb
         lsl r3, r4, #0
 
-        .org RetailP1RamAddress + 0x89a
+    .org BootDisplayFade_1
         .thumb
         cmp r1, #1
 
-        .org RetailP1RamAddress + 0x8b6
+    .org BootDisplayFade_2
         .thumb
         cmp r0, #1
 
-        .org RetailP1RamAddress + 0x8ca
+    .org BootDisplayFade_3
         .thumb
         lsl r0, r0, #0
     .endif
 
-    .org RetailP1RamAddress + 0x6dae
+    .org P3P4Crc16Gate + 0x3a
     .thumb
     .dh 0x0000
 
-    .org RetailP1RamAddress + 0x6e04
+    .org P5Crc16Gate + 0x20
     .thumb
     .dh 0x0000
 .close

@@ -41,15 +41,17 @@
 .definelabel Bios7SpiTransferBuffer,                  0x000033a5
 .definelabel Bios9NintendoLogoAddress,                0xffff0020
 
-; Standard firmware header fields and RAM-address encoding bases
+; Standard firmware header data shared by every reconstruction.
 .definelabel HeaderPart1RamaddrOffset,                0x000e
 .definelabel HeaderPart2RamaddrOffset,                0x0012
 .definelabel HeaderShiftAmountsOffset,                0x0014
 .definelabel FirmwarePart1RamaddrEncodingBase,        0x02800000
 .definelabel FirmwarePart2RamaddrEncodingBase,        0x03810000
+.definelabel SourceShiftAmounts,                       readu16("temp/h.bin", HeaderShiftAmountsOffset)
 
-; 256 KiB firmware user-settings storage and its retail RAM mirror
+; Firmware user-settings storage and its retail RAM mirror
 .definelabel FirmwareUserSettingsAddress256K,         0x0003fe00
+.definelabel FirmwareUserSettingsAddress512K,         0x0007fe00
 .definelabel FirmwareUserSettingsRamAddress,          0x023ffc80
 
 ; NDS card header copied to ARM9 RAM; 0x023Fxxxx is the retail 4 MiB mirror.

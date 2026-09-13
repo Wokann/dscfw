@@ -14,8 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NINTENDO_FIRMWARE_BYTES 0x40000u
-
 typedef struct FileData {
     unsigned char *bytes;
     size_t size;
@@ -250,11 +248,7 @@ static int run_official(const Arguments *arguments)
         return 0;
     }
 
-    if (image.size != NINTENDO_FIRMWARE_BYTES) {
-        fprintf(stderr, "error: '%s' must be exactly 0x%X bytes, found 0x%zX\n",
-                arguments->image_path, NINTENDO_FIRMWARE_BYTES, image.size);
-        result = 0;
-    } else if (range_end == 0 || range_end > image.size ||
+    if (range_end == 0 || range_end > image.size ||
                fill_start > fill_end || fill_end > range_end) {
         fprintf(stderr, "error: invalid CRC-32 range or private fill range\n");
         result = 0;
@@ -310,11 +304,7 @@ static int run_flashme(const Arguments *arguments)
         return 0;
     }
 
-    if (image.size != NINTENDO_FIRMWARE_BYTES) {
-        fprintf(stderr, "error: rebuilt image '%s' must be exactly 0x%X bytes, found 0x%zX\n",
-                arguments->image_path, NINTENDO_FIRMWARE_BYTES, image.size);
-        result = 0;
-    } else if (range_end == 0 || range_end > image.size || range_end > reference.size) {
+    if (range_end == 0 || range_end > image.size || range_end > reference.size) {
         fprintf(stderr, "error: invalid CRC-16 range for '%s' or '%s'\n",
                 arguments->image_path, arguments->reference_path);
         result = 0;
@@ -366,11 +356,7 @@ static int run_record(const Arguments *arguments)
         return 0;
     }
 
-    if (image.size != NINTENDO_FIRMWARE_BYTES) {
-        fprintf(stderr, "error: rebuilt image '%s' must be exactly 0x%X bytes, found 0x%zX\n",
-                arguments->image_path, NINTENDO_FIRMWARE_BYTES, image.size);
-        result = 0;
-    } else if (range_end == 0 || range_end > image.size) {
+    if (range_end == 0 || range_end > image.size) {
         fprintf(stderr, "error: invalid CRC-16 range\n");
         result = 0;
     } else {
@@ -415,11 +401,7 @@ static int run_check(const Arguments *arguments)
         return 0;
     }
 
-    if (image.size != NINTENDO_FIRMWARE_BYTES) {
-        fprintf(stderr, "error: rebuilt image '%s' must be exactly 0x%X bytes, found 0x%zX\n",
-                arguments->image_path, NINTENDO_FIRMWARE_BYTES, image.size);
-        result = 0;
-    } else if (range_end == 0 || range_end > image.size) {
+    if (range_end == 0 || range_end > image.size) {
         fprintf(stderr, "error: invalid CRC-16 range\n");
         result = 0;
     } else {

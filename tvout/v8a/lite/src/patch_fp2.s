@@ -331,10 +331,10 @@ fp2_retail_boot_code:
     .if BuildTvOut
         ; 替换 V6 的 REGCNT 锁定写入；其常量 FFFF 同时改为 DISPSW 的 4000。
         ; Replace V6's REGCNT lock write; its FFFF literal becomes DISPSW value 4000.
-        .org RetailP2RamAddress + 0x058e
+        .org TvoutDisplayControlLock
         .thumb
         bl fp2_tvout_apply
-        .org RetailP2RamAddress + 0x076c
+        .org TvoutDisplaySwitchValue
         .dh 0x4000
     .endif
 fp2_retail_end:

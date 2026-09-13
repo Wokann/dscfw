@@ -147,26 +147,26 @@ fp1_retail_boot:
 
     .incbin "temp/p1.bin"
 
-    .org RetailP1RamAddress + 0x2dc
+    .org BootStateDispatch
     .dh 0x0023
 
-    .org RetailP1RamAddress + 0x89e
+    .org BootDisplayFade_1
     .thumb
     cmp r1, #1
 
-    .org RetailP1RamAddress + 0x8ba
+    .org BootDisplayFade_2
     .thumb
     cmp r0, #1
 
-    .org RetailP1RamAddress + 0x8ce
+    .org BootDisplayFade_3
     .thumb
     lsl r0, r0, #0
 
-    .org RetailP1RamAddress + 0x6de6
+    .org P3P4Crc16Gate + 0x3a
     .thumb
     lsl r0, r0, #0
 
-    .org RetailP1RamAddress + 0x6e3c
+    .org P5Crc16Gate + 0x20
     .thumb
     lsl r0, r0, #0
 .close

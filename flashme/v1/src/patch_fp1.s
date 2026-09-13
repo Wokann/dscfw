@@ -147,11 +147,11 @@ fp1_retail_boot:
 
     .incbin "temp/p1.bin"
 
-    .org RetailP1RamAddress + 0x6de6
+    .org P3P4Crc16Gate + 0x3a
     .thumb
     .dh 0x0000
 
-    .org RetailP1RamAddress + 0x6e3c
+    .org P5Crc16Gate + 0x20
     .thumb
     .dh 0x0000
 .close

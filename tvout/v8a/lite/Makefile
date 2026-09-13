@@ -8,24 +8,21 @@ include $(INCLUDE_ROOT)/build-common.mk
 TEMP_DIR := temp
 BUILD_DIR := build
 VARIANT ?= normal
+CRC16_END := 0x3F800
 LAYOUT_FILE := layout.ld
 
 ifeq ($(VARIANT),normal)
 BUILD_STEALTH := 0
 BUILD_NOAUTO := 0
 OUTPUT := flashme_v8a_lite.bin
-FP1_OFFSET := 0x328F8
 else ifeq ($(VARIANT),stealth)
 BUILD_STEALTH := 1
 BUILD_NOAUTO := 0
 OUTPUT := flashme_v8a_lite_stealth.bin
-FP1_OFFSET := 0x328D8
 else ifeq ($(VARIANT),noauto)
 BUILD_STEALTH := 0
 BUILD_NOAUTO := 1
 OUTPUT := flashme_v8a_lite_noauto.bin
-FP1_OFFSET := 0x328F0
-CRC16_END := 0x3F800
 CRC16_FILE := flashme_v8a_lite_noauto_tvout.crc16
 CRC16_EXPECTED := $(strip $(file <$(CRC16_FILE)))
 LAYOUT_FILE := layout.noauto.ld
@@ -33,7 +30,6 @@ else ifeq ($(VARIANT),stealth-noauto)
 BUILD_STEALTH := 1
 BUILD_NOAUTO := 1
 OUTPUT := flashme_v8a_lite_stealth_noauto.bin
-FP1_OFFSET := 0x328D0
 else
 $(error VARIANT must be normal, stealth, noauto, or stealth-noauto)
 endif
@@ -77,7 +73,7 @@ patch: unpack
 
 pack: $(PACK_PREREQUISITE) patch
 	$(DSFWTOOL) -c $(OUTPUT) --layout $(LAYOUT_FILE) $(PACK_BASE_OPTIONS) $(PACK_HEADER_OPTION) -p1 -comp -encrypt $(BUILD_DIR)/p1.bin -p2 -comp -encrypt $(BUILD_DIR)/p2.bin -p3 -comp -flashme $(BUILD_DIR)/p3.bin -p4 -comp -flashme $(BUILD_DIR)/p4.bin -p5 -comp -flashme $(BUILD_DIR)/p5.bin -fh $(BUILD_DIR)/fh.bin -fp1 -comp $(BUILD_DIR)/fp1.bin -fp2 $(FP2_COMPRESS) $(BUILD_DIR)/fp2.bin -s 256K --fill FF
-	$(if $(filter noauto,$(VARIANT)),$(call CheckFlashMeCrc,$(OUTPUT),$(CRC16_END),$(CRC16_EXPECTED)),$(call DisplayFlashMeCrc,$(OUTPUT),0x3F800))
+	$(if $(filter noauto,$(VARIANT)),$(call CheckFlashMeCrc,$(OUTPUT),$(CRC16_END),$(CRC16_EXPECTED)),$(call DisplayFlashMeCrc,$(OUTPUT),$(CRC16_END)))
 
 normal:
 	$(MAKE) VARIANT=normal pack

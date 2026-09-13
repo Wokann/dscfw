@@ -8,17 +8,14 @@ include $(INCLUDE_ROOT)/build-common.mk
 TEMP_DIR := temp
 BUILD_DIR := build
 VARIANT ?= normal
+CRC16_END := 0x3F800
 
 ifeq ($(VARIANT),normal)
 BUILD_STEALTH := 0
 OUTPUT := flashme_v6_phat.bin
-FP1_OFFSET := 0x323D8
-CRC16_END := 0x3F800
 else ifeq ($(VARIANT),stealth)
 BUILD_STEALTH := 1
 OUTPUT := flashme_v6_phat_stealth.bin
-FP1_OFFSET := 0x32390
-CRC16_END := 0x3F800
 else
 $(error VARIANT must be normal or stealth)
 endif

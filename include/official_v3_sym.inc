@@ -1,5 +1,17 @@
 ; Nintendo official_v3 source-firmware layout
-.definelabel SourceShiftAmounts,                      readu16("temp/h.bin", HeaderShiftAmountsOffset)
-.definelabel RetailP1RamAddress,                      FirmwarePart1RamaddrEncodingBase - (readu16("temp/h.bin", HeaderPart1RamaddrOffset) << (2 + ((SourceShiftAmounts >> 3) & 7)))
-.definelabel RetailP2RamAddress,                      FirmwarePart2RamaddrEncodingBase - (readu16("temp/h.bin", HeaderPart2RamaddrOffset) << (2 + ((SourceShiftAmounts >> 9) & 7)))
+.definelabel RetailP1RamAddress,                      0x02320000
+.definelabel RetailP2RamAddress,                      0x037fa800
 .definelabel RetailP3RamAddress,                      0x02358d00
+.definelabel RetailP4RamAddress,                      0x02300200
+.definelabel RetailP5RamAddress,                      0x023a4960
+; Analyst names; these are not recovered Nintendo symbols.  Boot* names are
+; functional inferences; the CRC16 gate names are supported by dsofw analysis.
+.definelabel BootStateDispatch,                        RetailP1RamAddress + 0x000002dc
+.definelabel BootDisplayFade_1,                        RetailP1RamAddress + 0x0000089e
+.definelabel BootDisplayFade_2,                        RetailP1RamAddress + 0x000008ba
+.definelabel BootDisplayFade_3,                        RetailP1RamAddress + 0x000008ce
+.definelabel P3P4Crc16Gate,                            RetailP1RamAddress + 0x00006dac
+.definelabel P5Crc16Gate,                              RetailP1RamAddress + 0x00006e1c
+.definelabel NintendoLogoStateGate,                    RetailP3RamAddress + 0x0001019c
+.definelabel RSA_verify,                               RetailP3RamAddress + 0x00013ed0
+.definelabel RSA_verify_with_SHA1,                     RetailP3RamAddress + 0x000173c0

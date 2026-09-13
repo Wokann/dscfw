@@ -6,20 +6,20 @@
 
 ; NOP the Logo gate; make the next two P3 verifier routines return success. See after .close.
 ; 将 Logo 闸门置为 NOP；令后两处 P3 验证例程返回成功。详见 .close 后。
-    .org RetailP3RamAddress + 0x1019c
+    .org NintendoLogoStateGate
     .thumb
 ; Patch 1: replace the retained Nintendo Logo decision with no operation.
 ; 补丁 1：将保留 Nintendo Logo 判断替换为空操作。
     nop
 
-    .org RetailP3RamAddress + 0x13ed0
+    .org RSA_verify
     .thumb
 ; Patch 2: make the first verifier report success before returning.
 ; 补丁 2：令第一处验证例程在返回前报告成功。
     mov r0, #1
     bx lr
 
-    .org RetailP3RamAddress + 0x173c0
+    .org RSA_verify_with_SHA1
     .thumb
 ; Patch 3: make the second verifier report success before returning.
 ; 补丁 3：令第二处验证例程在返回前报告成功。

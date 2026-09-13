@@ -33,6 +33,9 @@ value read from its checked-in record; they never write a record. A mismatch is
 reported as a non-fatal warning after the output image has been created. Without
 <code>--write</code>, <code>crc16-record</code> only prints the current value.
 
+The tool accepts any image length; every supplied CRC or virtual-fill range must
+remain within that image.
+
 ---
 
 # FlashMe CRC 工具
@@ -48,3 +51,5 @@ reported as a non-fatal warning after the output image has been created. Without
 <code>crc16-check</code> 读取仓库内固定记录文件的值，不会写入记录；省略
 <code>--write</code> 时，<code>crc16-record</code> 只显示当前值。记录值不匹配仅在
 输出镜像生成后报告警告，不会使构建失败。
+
+工具接受任意长度的镜像；指定的 CRC 或虚拟填充范围都必须落在该镜像内。
