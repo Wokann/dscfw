@@ -21,5 +21,10 @@
 .definelabel HeaderOriginalVersionOffset,             0x017e
 .definelabel PrimaryHeaderInstallerClass,             0x0001
 .definelabel SecondaryHeaderInstallerCode,            0x0001
+.if FIX_FH
+; Keep the packaged FH and P2's runtime firmware-read address in sync with V5+.
+.definelabel FlashMeSecondaryHeaderAddress,           0x0003f680
+.else
 .definelabel FlashMeSecondaryHeaderAddress,           0x0003fc80
+.endif
 .definelabel Arm9PowerControlValue,                   0x0000820f
