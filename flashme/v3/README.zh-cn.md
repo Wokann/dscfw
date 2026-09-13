@@ -24,3 +24,16 @@
 | 变体 | 输出 | CRC 记录 | CRC-16 |
 | --- | --- | --- | --- |
 | <code>normal</code> | <code>flashme_v3_phat.bin</code> | <code>flashme_v3_phat.crc16</code> | <code>0xB439</code> |
+
+## 运行机制
+
+- 一级头 H 向 Boot ROM 提供 P1（ARM9）与 P2（ARM7）的固件位置和 RAM 暂存地址。
+- P1 与 P2 同时开始运行。P2 读取早期按键和 Slot-2 标识：它可进入恢复路径，或读取 FlashMe 的 FH。
+- FH 是存放在固件中的 FlashMe 二级头；其编码地址定位二级 FP1（ARM9）与 FP2（ARM7）镜像。
+- FP1 处理 ARM9 的热/冷启动状态与后续跳转。FP2 选择保留任天堂或 FlashMe 路径、完成 ARM7 侧同步，再转交控制权。
+- P3 是保留 ARM9 GUI/验证代码，P4 是 ARM7 无线代码，P5 为图形/数据；仅文档说明的位置被修改。
+## 分析记录
+
+- V3 保留 V1 的一级选择器、P3 验证修改、保留组件 CRC 绕过和 FP2 PWM 渐变。
+- 保留 P1 的 <code>+0x2DC/+0x89E/+0x8BA/+0x8CE</code> 四处 normal 专用修改改变健康提示控制流；它们独立于 FP2 渐变。
+- 实机表现符合这一分离：V3 有渐变，但不显示健康提示。

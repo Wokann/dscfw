@@ -1,6 +1,3 @@
-; FlashMe boot9 / FP1: ARM9 secondary boot component.
-; FlashMe boot9 / FP1：ARM9 次级启动组件。
-
 .create "build/fp1.bin", 0
     .headersize FlashMeFp1RamAddress
     .area FlashMePrefixBytes, 0x00
@@ -8,6 +5,8 @@
 
     ldr r10, [fp1_context_ipc_sync]
 
+; IPC B resumes the warm retained path; the other accepted state runs cold setup before ARM9 handoff. See after .close.
+; IPC B 恢复热启动保留路径；另一已接受状态在 ARM9 交接前执行冷启动准备。详见 .close 后。
 fp1_wait_b:
     ldrh r0, [r10]
     and r0, r0, #0x0f
@@ -27,6 +26,8 @@ fp1_wait_d_warm:
     ldr lr, [lr]
     b fp1_retail_boot
 
+; IPC did not select warm continuation: reset DMA/display state before either CPU enters its program path.
+; IPC 未选择热启动后续：在任一 CPU 进入程序路径前重置 DMA/显示状态。
 fp1_cold_boot:
     mov r0, #0
     mov r2, #0x2c
@@ -58,6 +59,8 @@ fp1_clear_dma_control:
     str r5, [r4, #4]
     strh r5, [r4, #8]
 
+; Cold ARM9 setup is complete; wait until ARM7 publishes IPC state D before restoring ARM9 context.
+; ARM9 冷启动准备完成；等待 ARM7 发布 IPC 状态 D 后恢复 ARM9 上下文。
 fp1_wait_d_cold:
     ldrh r0, [r10]
     and r0, r0, #0x0f
@@ -137,6 +140,8 @@ fp1_slot_vram_lcdc_enable_abcd:
     .dw VramcntLcdcEnableAbcd
     .endarea
 
+; Embed retained P1 here; the following fixed offsets alter only the listed retained-P1 decisions.
+; 此处嵌入保留 P1；后续固定偏移仅改变所列保留 P1 判断。
 fp1_retail_boot:
     .org RetailP1RamAddress
 
@@ -165,3 +170,20 @@ fp1_retail_boot:
     .thumb
     lsl r0, r0, #0
 .close
+
+; Detailed analysis / 详细分析:
+; 1. `fp1_wait_b` polls the low nibble of IPC_SYNC. State B is the warm continuation handshake.
+; 2. `fp1_cold_boot` is the alternate path: it clears DMA controls, display/VRAM state, and later OAM/palette memory.
+; 3. Both paths wait for ARM7 state D before restoring the saved register context and entering ARM9 continuation code.
+; 4. `fp1_retail_boot` embeds retained P1 and applies version-specific word/halfword patches after the embedded bytes.
+; 1. `fp1_wait_b` 轮询 IPC_SYNC 低半字节；状态 B 是热启动后续握手。
+; 2. `fp1_cold_boot` 是替代路径：清除 DMA 控制、显示/VRAM 状态，并随后清除 OAM/调色板内存。
+; 3. 两条路径都等待 ARM7 的 D 状态，再恢复保存的寄存器上下文并进入 ARM9 后续代码。
+; 4. `fp1_retail_boot` 嵌入保留 P1，并在嵌入字节之后应用版本专属的字/半字补丁。
+
+; Additional version-specific analysis / 附加版本专属分析:
+; Version-specific V3 flow / V3 版本专属流程:
+; The four normal-only retained-P1 sites at +0x2DC/+0x89E/+0x8BA/+0x8CE redirect health-prompt flow.
+; They coexist with the two V1 CRC-gate edits at +0x6DE6/+0x6E3C; the FP2 PWM fade is a separate mechanism.
+; normal 专用的 +0x2DC/+0x89E/+0x8BA/+0x8CE 四处保留 P1 位置重定向健康提示流程。
+; 它们与 V1 的 +0x6DE6/+0x6E3C 两处 CRC 闸门修改并存；FP2 PWM 渐变是独立机制。

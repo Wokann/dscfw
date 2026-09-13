@@ -1,13 +1,16 @@
-
 .create "build/p1.bin", 0
     .headersize PrimaryP1RamAddress
     .area 0x000000fc, 0x00
     .arm
 
     b p1_wait_command
+; 0 waits; 1 performs ARM9 cold setup; any other nonzero word is the final ARM9 entry. See after .close.
+; 0 等待；1 执行 ARM9 冷启动准备；其他非零字为最终 ARM9 入口。详见 .close 后。
 p1_command:
     .dw 0x00000000
 
+; Poll the P2 mailbox until it asks for cleanup or supplies a final ARM9 entry.
+; 轮询 P2 邮箱，直到它请求清理或提供最终 ARM9 入口。
 p1_wait_command:
     ldr r0, [p1_command]
     cmp r0, #0
@@ -16,6 +19,8 @@ p1_wait_command:
     beq p1_cold_boot
     bx r0
 
+; Mailbox value 1: clear ARM9-visible hardware state, then acknowledge by clearing the mailbox.
+; 邮箱值 1：清理 ARM9 可见硬件状态，再清零邮箱以确认。
 p1_cold_boot:
     mov r0, #0
     mov r2, #0x2c
@@ -90,3 +95,11 @@ p1_slot_arm9_boot_state:
     .dw Arm9PowerControlValue
     .endarea
 .close
+
+; Detailed analysis / 详细分析:
+; 1. `p1_wait_command` polls the mailbox. Zero means wait; one selects `p1_cold_boot`; another value is an ARM9 entry address.
+; 2. Cold boot clears DMA/video memory state and returns the mailbox to zero, acknowledging that P2 may continue.
+; 3. P2 finally writes the chosen ARM9 entry to the same mailbox, and P1 branches to it.
+; 1. `p1_wait_command` 轮询邮箱：零表示等待；一选择 `p1_cold_boot`；其他值为 ARM9 入口地址。
+; 2. 冷启动清除 DMA/视频内存状态并将邮箱归零，确认 P2 可以继续。
+; 3. P2 最后向同一邮箱写入所选 ARM9 入口，P1 跳转至该入口。

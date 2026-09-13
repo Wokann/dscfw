@@ -1,6 +1,3 @@
-; FlashMe boot7 / FP2: ARM7 secondary boot component.
-; FlashMe boot7 / FP2：ARM7 次级启动组件。
-
 .create "build/fp2.bin", 0
     .headersize FlashMeFp2RamAddress
     .area FlashMePrefixBytes, 0x00
@@ -24,6 +21,8 @@
     ands r0, r0, #(KEYXY_X | KEYXY_Y)
     beq fp2_flash_boot
 
+; Select retains Nintendo; A+B+X+Y or PASS/DSBooter selects FlashMe. See after .close.
+; Select 保留任天堂；A+B+X+Y 或 PASS/DSBooter 选择 FlashMe。详见 .close 后。
 fp2_check_boot_state:
 
     adr r0, fp2_boot_state
@@ -38,6 +37,8 @@ fp2_check_boot_state:
     cmp r7, r3
     beq fp2_flash_boot
 
+; Retained path: publish ARM7 state for Nintendo P2, optionally present the normal fade, then return to retained code.
+; 保留路径：为任天堂 P2 发布 ARM7 状态，可选呈现 normal 渐变，再返回保留代码。
 fp2_retail_boot:
 
     mov r0, #0x0b00
@@ -62,6 +63,8 @@ fp2_service_loop:
     ldr lr, [lr]
     b fp2_retail_boot_code
 
+; One PWM step writes a power-management channel after a delay; the caller repeats it from black to white.
+; 单个 PWM 步骤延时后写入电源管理通道；调用者重复它以从黑渐变到白。
 fp2_backlight_fade_step:
     stmdb sp!, {lr}
     swi SwiWaitByLoop
@@ -81,6 +84,8 @@ fp2_boot_state:
 fp2_boot_signature:
     .ascii "DSBooterPASSFLSH"
 
+; FlashMe path: stop the retained path, then perform cold program setup before entering the selected ARM7 entry.
+; FlashMe 路径：停止保留路径，随后进行冷启动程序准备并进入所选 ARM7 入口。
 fp2_flash_boot:
 
     mov r0, #0x0c00
@@ -162,3 +167,15 @@ fp2_retail_end:
         .error "FlashMe: FP2 overlaps the primary P2 staging window"
     .endif
 .close
+
+; Detailed analysis / 详细分析:
+; 1. `fp2_check_boot_state` evaluates active-low keys and the Slot-2 title/signature. Select keeps retained firmware;
+;    A+B+X+Y forces FlashMe; `PASS`/`DSBooter` provides the automatic selection.
+; 2. `fp2_retail_boot` returns to Nintendo P2. normal builds visit the PWM fade helper; stealth skips that presentation.
+; 3. `fp2_flash_boot` takes the FlashMe path. `fp2_cold_boot` reads the working header, clears DMA, signals boot completion,
+;    performs the required SPI/IPC transition, waits for the peer state, and then branches to the ARM7 entry.
+; 1. `fp2_check_boot_state` 判断低有效按键和 Slot-2 标题/标识。Select 保留固件；A+B+X+Y 强制 FlashMe；
+;    `PASS`/`DSBooter` 提供自动选择。
+; 2. `fp2_retail_boot` 回到任天堂 P2。normal 进入 PWM 渐变辅助例程；stealth 跳过该呈现步骤。
+; 3. `fp2_flash_boot` 走 FlashMe 路径。`fp2_cold_boot` 读取工作头、清 DMA、通知启动完成、执行所需 SPI/IPC 切换，
+;    等待对端状态后跳转 ARM7 入口。

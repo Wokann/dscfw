@@ -24,3 +24,16 @@
 | 变体 | 输出 | CRC 记录 | CRC-16 |
 | --- | --- | --- | --- |
 | <code>normal</code> | <code>flashme_v1_phat.bin</code> | <code>flashme_v1_phat.crc16</code> | <code>0x53FA</code> |
+
+## 运行机制
+
+- 一级头 H 向 Boot ROM 提供 P1（ARM9）与 P2（ARM7）的固件位置和 RAM 暂存地址。
+- P1 与 P2 同时开始运行。P2 读取早期按键和 Slot-2 标识：它可进入恢复路径，或读取 FlashMe 的 FH。
+- FH 是存放在固件中的 FlashMe 二级头；其编码地址定位二级 FP1（ARM9）与 FP2（ARM7）镜像。
+- FP1 处理 ARM9 的热/冷启动状态与后续跳转。FP2 选择保留任天堂或 FlashMe 路径、完成 ARM7 侧同步，再转交控制权。
+- P3 是保留 ARM9 GUI/验证代码，P4 是 ARM7 无线代码，P5 为图形/数据；仅文档说明的位置被修改。
+## 分析记录
+
+- P2 将低有效的 A+B+Start+Select 及 Slot-2 Game Code <code>BOOT</code> 视为早期恢复路径；其他普通情况加载 FH 并装入 FP1/FP2。
+- P3 将 Nintendo Logo 闸门改为 NOP，并使两处验证例程成功返回；FP1 则独立取消两处保留组件 CRC 判断。
+- <code>PASS</code>、<code>DSBooter</code> 或强制 A+B+X+Y 令 FP2 选择 FlashMe；Select 保留任天堂固件。normal 的 PWM 从黑渐变到白，但实机测试确认 V1 之后仍显示健康提示。

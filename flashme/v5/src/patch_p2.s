@@ -1,4 +1,3 @@
-
 .create "build/p2.bin", 0
     .headersize PrimaryP2RamAddress
     .arm
@@ -16,6 +15,8 @@ p2_thumb:
     mov r2, #0
     bl p2_write_power_management
 
+; A+B+Start+Select or Slot-2 BOOT enters recovery; otherwise read FH and install FP1/FP2. See after .close.
+; A+B+Start+Select 或 Slot-2 BOOT 进入恢复；其他情况读 FH 并装入 FP1/FP2。详见 .close 后。
     adr r7, p2_boot_parameters_data
     ldmia r7!, {r0-r2, r4-r6}
     ldrh r1, [r1]
@@ -25,6 +26,8 @@ p2_thumb:
     cmp r1, r2
     bne p2_load_secondary_p12
 
+; Early recovery: copy the retained trampoline parameters and rejoin the Slot-2 handoff path.
+; 早期恢复：复制保留跳板参数并重新进入 Slot-2 交接路径。
 p2_boot_slot2:
     ldmia r7!, {r0-r4}
     stmia r3!, {r0-r2}
@@ -60,6 +63,8 @@ p2_arm9_trampoline_primary_p1:
     .dw PrimaryP1RamAddress
 
     .org PrimaryP2RamAddress + 0x68
+; Ordinary boot: copy FH, decode FP1/FP2 RAM locations, and prepare the ARM9 continuation pointer.
+; 普通启动：复制 FH、解码 FP1/FP2 RAM 位置，并准备 ARM9 后续指针。
 p2_load_secondary_p12:
 
     mov r1, r11
@@ -78,6 +83,8 @@ p2_load_secondary_p12:
 
     str r7, [r4, #0x08]
 
+; Return to retained ARM7 code with either the recovery or decoded-secondary parameters.
+; 带着恢复参数或已解码二级参数返回保留 ARM7 代码。
 p2_handoff:
     mov lr, r6
     mov r0, sp
@@ -165,3 +172,14 @@ p2_primary_end:
         .error "FlashMe: primary P2 exceeds its staging window"
     .endif
 .close
+
+; Detailed analysis / 详细分析:
+; 1. P2 enables the required power-management state, then reads the active-low early key bits.
+; 2. A+B+Start+Select, or the Slot-2 `BOOT` Game Code, jumps to `p2_boot_slot2` before any FH load.
+; 3. Otherwise `p2_load_secondary_p12` copies the secondary header, decodes its packed P1/P2 RAM destinations,
+;    and publishes the ARM9 continuation/trampoline parameters.
+; 4. `p2_handoff` rejoins the retained ARM7 flow with those parameters; firmware-read callbacks service its data access.
+; 1. P2 先启用所需电源管理状态，再读取低有效的早期按键位。
+; 2. A+B+Start+Select 或 Slot-2 的 `BOOT` Game Code 会在读取 FH 前跳至 `p2_boot_slot2`。
+; 3. 其他情况 `p2_load_secondary_p12` 复制二级头、解码打包的 P1/P2 RAM 目标，并发布 ARM9 后续/跳板参数。
+; 4. `p2_handoff` 带着这些参数重新进入保留 ARM7 流程；固件读取回调负责其数据访问。

@@ -1,6 +1,3 @@
-; FlashMe boot7 / FP2: ARM7 secondary boot component.
-; FlashMe boot7 / FP2：ARM7 次级启动组件。
-
 .create "build/fp2.bin", 0
     .headersize FlashMeFp2RamAddress
     .area FlashMePrefixBytes, 0x00
@@ -18,6 +15,8 @@
     ldrh r0, [r10]
 
     .if BuildNoAuto
+        ; noauto requires A+B+X+Y; PASS/DSBooter no longer selects FlashMe automatically.
+        ; noauto 要求 A+B+X+Y；PASS/DSBooter 不再自动选择 FlashMe。
 
         ands r0, r0, #(KEY_A | KEY_B)
         bne fp2_retail_boot
@@ -46,6 +45,8 @@ fp2_retained_boot_state_check:
         ands r0, r0, #(KEYXY_X | KEYXY_Y)
         beq fp2_flash_boot
 
+; This selector checks keys and retained Slot-2 state; noauto makes Select the manual FlashMe key. See after .close.
+; 此选择器检查按键和保留 Slot-2 状态；noauto 将 Select 作为手动 FlashMe 键。详见 .close 后。
 fp2_check_boot_state:
 
         adr r0, fp2_boot_state
@@ -60,6 +61,8 @@ fp2_check_boot_state:
     .endif
 
     .org FlashMeFp2RamAddress + (0x064 - (BuildNoAuto * 4))
+; Retained path: publish ARM7 state for Nintendo P2, optionally present the normal fade, then return to retained code.
+; 保留路径：为任天堂 P2 发布 ARM7 状态，可选呈现 normal 渐变，再返回保留代码。
 fp2_retail_boot:
     mov r0, #0x0b00
     strh r0, [r10, #0x50]
@@ -92,6 +95,8 @@ fp2_service_loop:
         ldr lr, [lr]
         b fp2_retail_boot_code
 
+; One PWM step writes a power-management channel after a delay; the caller repeats it from black to white.
+; 单个 PWM 步骤延时后写入电源管理通道；调用者重复它以从黑渐变到白。
 fp2_backlight_fade_step:
         stmdb sp!, {lr}
         swi SwiWaitByLoop
@@ -112,6 +117,8 @@ fp2_boot_state:
     .ascii "DSBooterPASS"
 
     .org FlashMeFp2RamAddress + ((BuildStealth ? 0x08c : 0x0f0) - (BuildNoAuto * 4))
+; FlashMe path: stop the retained path, then perform cold program setup before entering the selected ARM7 entry.
+; FlashMe 路径：停止保留路径，随后进行冷启动程序准备并进入所选 ARM7 入口。
 fp2_flash_boot:
     mov r0, #0x0c00
     strh r0, [r10, #0x50]
@@ -119,6 +126,8 @@ fp2_flash_boot:
     ldr r12, [fp2_slot_arm7_return]
     bx r12
 
+; Copy the working header and reset DMA; the remaining operations make ARM7 state safe for program entry.
+; 复制工作头并重置 DMA；其余操作使 ARM7 状态适合进入程序。
 fp2_cold_boot:
     mov r11, lr
     bl fp2_clear_dma
@@ -140,6 +149,8 @@ fp2_wait_e:
     bx r11
 
     .org FlashMeFp2RamAddress + ((BuildStealth ? 0x0e4 : 0x148) - (BuildNoAuto * 4))
+; Retained V7 helper: V8 selector no longer calls this setup, so automatic boot does not start the private probe.
+; 保留的 V7 辅助例程：V8 选择器不再调用此设置，自动启动不会开始私有探测。
 fp2_aux_enable:
     ldr r0, [fp2_slot_aux_spi_control]
     ldr r3, [fp2_slot_aux_spicnt]
@@ -303,3 +314,22 @@ fp2_retail_end:
         .error "FlashMe: FP2 overlaps the primary P2 staging window"
     .endif
 .close
+
+; Detailed analysis / 详细分析:
+; 1. `fp2_check_boot_state` evaluates active-low keys and the Slot-2 title/signature. Select keeps retained firmware;
+;    A+B+X+Y forces FlashMe; `PASS`/`DSBooter` provides the automatic selection.
+; 2. `fp2_retail_boot` returns to Nintendo P2. normal builds visit the PWM fade helper; stealth skips that presentation.
+; 3. `fp2_flash_boot` takes the FlashMe path. `fp2_cold_boot` reads the working header, clears DMA, signals boot completion,
+;    performs the required SPI/IPC transition, waits for the peer state, and then branches to the ARM7 entry.
+; 1. `fp2_check_boot_state` 判断低有效按键和 Slot-2 标题/标识。Select 保留固件；A+B+X+Y 强制 FlashMe；
+;    `PASS`/`DSBooter` 提供自动选择。
+; 2. `fp2_retail_boot` 回到任天堂 P2。normal 进入 PWM 渐变辅助例程；stealth 跳过该呈现步骤。
+; 3. `fp2_flash_boot` 走 FlashMe 路径。`fp2_cold_boot` 读取工作头、清 DMA、通知启动完成、执行所需 SPI/IPC 切换，
+;    等待对端状态后跳转 ARM7 入口。
+
+; Additional version-specific analysis / 附加版本专属分析:
+; Version-specific V8 flow / V8 版本专属流程:
+; V8 retains fp2_aux helper code but removes the selector-to-probe edge, so normal/stealth no longer enter the V7 automatic private sequence.
+; noauto instead waits for the manual A+B+X+Y selection. This removes the repeated private Slot-1 signaling from automatic boot.
+; V8 保留 fp2_aux 辅助代码，但删除选择器到探测的边，因此 normal/stealth 不再进入 V7 自动私有序列。
+; noauto 改为等待手动 A+B+X+Y 选择，从自动启动中移除重复私有 Slot-1 信号。

@@ -1,24 +1,21 @@
-# FlashMe V7 Old Lite build package
+# FlashMe V7 Old Lite archival note
 
 [简体中文](README.zh-cn.md)
 
-## Declaration
+This directory intentionally contains no source code, Makefile, build output, or
+CRC records.
 
-This package contains ARMIPS source and CRC reference records only. It does
-not distribute Nintendo firmware images or original FlashMe images.
+## Version status
 
-## Build
+V7 Lite is known to have beta 1 and beta 2, but the independent-install image
+previously preserved here cannot yet be identified as either beta.
 
-Place <code>official_v6.bin</code> in the <code>flashme/</code> root, then run
-<code>make</code> from this directory.
-To build every listed variant, run <code>make variants</code>.
+The Lite firmware in that independently installed image has been verified to be
+identical to the Lite firmware embedded in both the V7 Lite and Phat integrated
+installer packages. This makes beta 2 a plausible identification, not a
+confirmed one.
 
-## CRC-16/IBM
-
-Each build verifies the byte range <code>[0x000000, 0x3F800)</code>.
-The UTF-8 <code>*.crc16</code> records contain the reference values.
-
-| Variant | Output | CRC record | CRC-16 |
-| --- | --- | --- | --- |
-| <code>stealth</code> | <code>flashme_v7_old_lite_stealth.bin</code> | <code>flashme_v7_old_lite_stealth.crc16</code> | <code>0xF5C9</code> |
-| <code>normal</code> | <code>flashme_v7_old_lite.bin</code> | <code>flashme_v7_old_lite.crc16</code> | <code>0xF684</code> |
+Because the firmware is identical, this repository no longer maintains a
+separate V7 Old Lite source/build copy. See
+[`flashme/v7_new/lite/README.md`](../../v7_new/lite/README.md) for the
+maintained Lite code and analysis.

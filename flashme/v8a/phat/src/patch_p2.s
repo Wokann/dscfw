@@ -1,4 +1,3 @@
-
 .create "build/p2.bin", 0
     .headersize PrimaryP2RamAddress
     .arm
@@ -25,7 +24,11 @@ p2_thumb:
     cmp r1, r2
     bne p2_load_secondary_p12
 
+; Start+Select/BOOT: prepare both CPUs, then use B7 Slot-1 loading or Slot-2 fallback. See after .close.
+; Start+Select/BOOT：准备双 CPU，再用 B7 Slot-1 装载或 Slot-2 回退。详见 .close 后。
 p2_recovery_boot:
+    ; Start+Select or BOOT enters this route; state later chooses standard Slot-1 load or Slot-2 fallback.
+    ; Start+Select 或 BOOT 进入此路径；稍后由状态选择标准 Slot-1 装载或 Slot-2 回退。
 
     mov r0, #1
     ldr r5, [p2_slot_primary_p1_command]
@@ -70,6 +73,8 @@ p2_skip_header_fast_copy:
     ldr r1, [p2_slot_delay_units]
     swi 0x08
 
+; Do not read the chosen media until P1 clears the mailbox after cold preparation.
+; 在 P1 冷启动准备后清零邮箱前，不读取所选媒体。
 p2_wait_p1:
     ldrh r0, [r5]
     cmp r0, #0
@@ -106,6 +111,8 @@ p2_wait_p1:
     str r0, [r5]
     bx r1
 
+; Nonzero recovery state uses the established Slot-2 trampoline instead of standard Slot-1 B7 reads.
+; 非零恢复状态使用既有 Slot-2 跳板，而非标准 Slot-1 B7 读取。
 p2_boot_slot2:
 
     ldmia r7!, {r0-r4}
@@ -115,7 +122,11 @@ p2_boot_slot2:
     b p2_handoff
 
     .org PrimaryP2RamAddress + 0x000000ce
+; Build B7 requests from one header section: ROM offset, RAM destination, remaining byte count, then repeat by chunk.
+; 用一个头部段构造 B7 请求：ROM 偏移、RAM 目标、剩余字节数，再按块重复。
 p2_card_transfer:
+    ; Standard B7 card reads load ARM9/ARM7 from the already available NDS header fields.
+    ; 标准 B7 读卡根据已存在的 NDS 头字段装载 ARM9/ARM7。
     push {r4-r7, lr}
     mov r7, #1
     lsl r7, r7, #9
@@ -373,3 +384,13 @@ p2_slot_card_control:
 p2_slot_gc_data_in:
     .dw REG_GCDATAIN
 .close
+
+; Detailed analysis / 详细分析:
+; 1. Start+Select or BOOT enters p2_recovery_boot. P2 first writes mailbox value 1 and waits for P1 to acknowledge cleanup.
+; 2. It refreshes the working header and consults 0x027FF80C + 0x0C. Nonzero chooses the old Slot-2 handoff.
+; 3. Zero invokes p2_card_transfer twice: B7 reads use resident-header ARM9/ARM7 ROM offset, RAM destination, size, and entry fields.
+; 4. After copying the required handoff values, P2 writes ARM9's entry to the mailbox and branches to ARM7's entry.
+; 1. Start+Select 或 BOOT 进入 p2_recovery_boot。P2 先写邮箱值 1，并等待 P1 确认清理。
+; 2. 它刷新工作头并检查 0x027FF80C + 0x0C；非零选择旧 Slot-2 交接。
+; 3. 零会两次调用 p2_card_transfer：B7 读取使用驻留头的 ARM9/ARM7 ROM 偏移、RAM 目标、大小和入口字段。
+; 4. 复制所需交接值后，P2 将 ARM9 入口写入邮箱并跳至 ARM7 入口。

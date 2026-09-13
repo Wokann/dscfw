@@ -23,3 +23,16 @@
 | <code>stealth_noauto</code> | <code>flashme_v8_lite_stealth_noauto.bin</code> | <code>flashme_v8_lite_stealth_noauto.crc16</code> | <code>0x70F8</code> |
 | <code>stealth</code> | <code>flashme_v8_lite_stealth.bin</code> | <code>flashme_v8_lite_stealth.crc16</code> | <code>0x20F7</code> |
 | <code>normal</code> | <code>flashme_v8_lite.bin</code> | <code>flashme_v8_lite.crc16</code> | <code>0x33C8</code> |
+
+## 运行机制
+
+- 一级头 H 向 Boot ROM 提供 P1（ARM9）与 P2（ARM7）的固件位置和 RAM 暂存地址。
+- P1 与 P2 同时开始运行。P2 读取早期按键和 Slot-2 标识：它可进入恢复路径，或读取 FlashMe 的 FH。
+- FH 是存放在固件中的 FlashMe 二级头；其编码地址定位二级 FP1（ARM9）与 FP2（ARM7）镜像。
+- FP1 处理 ARM9 的热/冷启动状态与后续跳转。FP2 选择保留任天堂或 FlashMe 路径、完成 ARM7 侧同步，再转交控制权。
+- P3 是保留 ARM9 GUI/验证代码，P4 是 ARM7 无线代码，P5 为图形/数据；仅文档说明的位置被修改。
+## 分析记录
+
+- V8 删除选择器对 V7 自动私有 DSLink/MK2/MK3 探测的调用。<code>fp2_aux_*</code> 辅助例程仍在，但选择器无法到达。
+- 因此 normal/stealth 不再自动发送私有 Slot-1 序列；<code>noauto</code>/<code>stealth_noauto</code> 要求手动 A+B+X+Y 选择。
+- Lite normal 调整启动呈现延迟，同时保留可见渐变。

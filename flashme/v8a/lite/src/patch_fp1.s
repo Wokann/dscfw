@@ -1,6 +1,3 @@
-; FlashMe boot9 / FP1: ARM9 secondary boot component.
-; FlashMe boot9 / FP1：ARM9 次级启动组件。
-
 .create "build/fp1.bin", 0
     .headersize FlashMeFp1RamAddress
     .area FlashMePrefixBytes, 0x00
@@ -8,6 +5,8 @@
 
     ldr r10, [fp1_context_ipc_sync]
 
+; IPC B resumes the warm retained path; the other accepted state runs cold setup before ARM9 handoff. See after .close.
+; IPC B 恢复热启动保留路径；另一已接受状态在 ARM9 交接前执行冷启动准备。详见 .close 后。
 fp1_wait_b:
     ldrh r0, [r10]
     and r0, r0, #0x0f
@@ -48,6 +47,8 @@ fp1_wait_e_warm:
     .else
         .org FlashMeFp1RamAddress + 0x058
     .endif
+; IPC did not select warm continuation: reset DMA/display state before either CPU enters its program path.
+; IPC 未选择热启动后续：在任一 CPU 进入程序路径前重置 DMA/显示状态。
 fp1_cold_boot:
     bl fp1_cold_prepare
     adr r12, fp1_context
@@ -191,6 +192,8 @@ fp1_slot_clear_source:
     .endif
     .endarea
 
+; Embed retained P1 here; the following fixed offsets alter only the listed retained-P1 decisions.
+; 此处嵌入保留 P1；后续固定偏移仅改变所列保留 P1 判断。
 fp1_retail_boot:
     .org RetailP1RamAddress
 
@@ -223,3 +226,13 @@ fp1_retail_boot:
     .thumb
     .dh 0x0000
 .close
+
+; Detailed analysis / 详细分析:
+; 1. `fp1_wait_b` polls the low nibble of IPC_SYNC. State B is the warm continuation handshake.
+; 2. `fp1_cold_boot` is the alternate path: it clears DMA controls, display/VRAM state, and later OAM/palette memory.
+; 3. Both paths wait for ARM7 state D before restoring the saved register context and entering ARM9 continuation code.
+; 4. `fp1_retail_boot` embeds retained P1 and applies version-specific word/halfword patches after the embedded bytes.
+; 1. `fp1_wait_b` 轮询 IPC_SYNC 低半字节；状态 B 是热启动后续握手。
+; 2. `fp1_cold_boot` 是替代路径：清除 DMA 控制、显示/VRAM 状态，并随后清除 OAM/调色板内存。
+; 3. 两条路径都等待 ARM7 的 D 状态，再恢复保存的寄存器上下文并进入 ARM9 后续代码。
+; 4. `fp1_retail_boot` 嵌入保留 P1，并在嵌入字节之后应用版本专属的字/半字补丁。
