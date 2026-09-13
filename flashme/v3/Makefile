@@ -40,7 +40,7 @@ patch: unpack
 	$(ARMIPS) -armimmediate max-imm8 -root . -definelabel FIX_FH $(FIX_FH) src/main.s
 
 pack: patch
-	$(DSFWTOOL) -c $(OUTPUT) -h $(BUILD_DIR)/h.bin -p1 -comp -encrypt --offset 0x180 $(BUILD_DIR)/p1.bin -p2 -comp -encrypt --offset 0x1A0 $(BUILD_DIR)/p2.bin -p3 -comp -flashme --offset 0x183B0 $(BUILD_DIR)/p3.bin -p4 -comp -flashme --offset 0x0F5B0 $(BUILD_DIR)/p4.bin -p5 -comp -flashme --offset 0x2C0 $(BUILD_DIR)/p5.bin -fh --offset $(FH_OFFSET) $(BUILD_DIR)/fh.bin -fp1 -comp --offset 0x323B0 $(BUILD_DIR)/fp1.bin -fp2 -comp --offset 0x29FA8 $(BUILD_DIR)/fp2.bin -s 256K --fill FF
+	$(DSFWTOOL) -c $(OUTPUT) --layout layout.ld -h $(BUILD_DIR)/h.bin -p1 -comp -encrypt $(BUILD_DIR)/p1.bin -p2 -comp -encrypt $(BUILD_DIR)/p2.bin -p3 -comp -flashme $(BUILD_DIR)/p3.bin -p4 -comp -flashme $(BUILD_DIR)/p4.bin -p5 -comp -flashme $(BUILD_DIR)/p5.bin -fh $(BUILD_DIR)/fh.bin -fp1 -comp $(BUILD_DIR)/fp1.bin -fp2 -comp $(BUILD_DIR)/fp2.bin -s 256K --fill FF
 	$(if $(filter 0,$(FIX_FH)),$(call CheckFlashMeCrc,$(OUTPUT),$(CRC16_END),$(CRC16_EXPECTED)),$(call DisplayFlashMeCrc,$(OUTPUT),$(CRC16_END)))
 
 fix_fh:
