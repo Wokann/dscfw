@@ -24,8 +24,16 @@ Wi-Fi 校准、MAC 地址、接入点与用户设置数据不会存储，也不�
 可用构建包与具体规则请参阅 [flashme/README.zh-cn.md](flashme/README.zh-cn.md) 和
 [tvout/README.zh-cn.md](tvout/README.zh-cn.md)。
 
-## 后续计划
+## 地区构建与后续计划
 
-后续会存放基于这些资料制作的个人 iQue 与韩国固件相关源码项目。更长远的目标是提供依赖
-devkitPro 等自制软件开发工具、可从零编译的 Nintendo DS 自制软件模板工程，而非依赖
-恢复出的固件二进制数据。
+基于 iQue 与韩国固件的 FlashMe 移植现已位于 [`wokann/`](wokann/)：
+
+- [`wokann/flashme_v7_new/`](wokann/flashme_v7_new/)：iQue V1 Phat，以及
+  iQue V2 Lite、韩国 V1 Lite 的 V7 New 构建；
+- [`wokann/flashme_v8a/`](wokann/flashme_v8a/)：iQue V1 Phat，以及 iQue V2
+  Lite、韩国 V1 Lite 的 V8a FlashMe 构建；
+- [`wokann/tvout_v8a/`](wokann/tvout_v8a/)：iQue V2 Lite 与韩国 V1 Lite 的
+  V8a TV-out 构建。
+
+其余长期目标是提供依赖 devkitPro 等自制软件开发工具、可从零编译的 Nintendo DS
+自制软件模板工程，而非依赖恢复出的固件二进制数据。

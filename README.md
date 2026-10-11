@@ -27,9 +27,17 @@ data; a raw whole-image comparison across consoles is therefore not implied.
 See [flashme/README.md](flashme/README.md) and [tvout/README.md](tvout/README.md)
 for the available packages and exact build rules.
 
-## Planned contents
+## Regional builds and future work
 
-Future work will add personal iQue- and Korean-firmware-related source projects
-derived from this research.  The longer-term goal is also to provide Nintendo
-DS homebrew template projects that build from source with development tools such
-as devkitPro, rather than relying on recovered firmware binaries.
+iQue- and Korean-firmware FlashMe ports are now included under [`wokann/`](wokann/):
+
+- [`wokann/flashme_v7_new/`](wokann/flashme_v7_new/) contains V7 New builds for
+  iQue V1 Phat, plus iQue V2 Lite and Korean V1 Lite.
+- [`wokann/flashme_v8a/`](wokann/flashme_v8a/) contains V8a builds for iQue V1
+  Phat, plus iQue V2 Lite and Korean V1 Lite.
+- [`wokann/tvout_v8a/`](wokann/tvout_v8a/) contains the V8a Lite TV-out builds
+  for iQue V2 Lite and Korean V1 Lite.
+
+The remaining longer-term goal is to provide Nintendo DS homebrew template
+projects that build from source with development tools such as devkitPro,
+rather than relying on recovered firmware binaries.
